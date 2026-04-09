@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -7,6 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Ausgaben" />
   <title>Ausgaben</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231A1916'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='38'%3E%F0%9F%92%B0%3C/text%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231A1916'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='110'%3E%F0%9F%92%B0%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -55,24 +58,12 @@
     }
 
     /* ── Header ── */
-    header {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
+    header { display: flex; flex-direction: column; gap: 4px; }
     .eyebrow {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--muted);
+      font-size: 11px; font-weight: 500; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--muted);
     }
-    h1 {
-      font-size: 28px;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      line-height: 1.1;
-    }
+    h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
 
     /* ── Card ── */
     .card {
@@ -86,141 +77,146 @@
       gap: 24px;
     }
 
-    /* ── Amount ── */
-    .amount-block {
+    /* ── Amount label row ── */
+    .amount-label-row {
       display: flex;
-      flex-direction: column;
-      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
     }
     label {
-      font-size: 12px;
-      font-weight: 500;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--muted);
+      font-size: 12px; font-weight: 500; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted);
     }
-    .amount-input-row {
-      display: flex;
-      align-items: center;
-      gap: 0;
+    .mode-toggle {
+      background: none;
       border: 1.5px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
+      border-radius: 8px;
+      padding: 3px 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px; font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: all 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mode-toggle:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ── Amount block ── */
+    .amount-block { display: flex; flex-direction: column; gap: 8px; }
+
+    /* keyboard input */
+    .amount-input-row {
+      display: flex; align-items: center;
+      border: 1.5px solid var(--border);
+      border-radius: 12px; overflow: hidden;
       transition: border-color 0.15s;
     }
-    .amount-input-row:focus-within {
-      border-color: var(--accent);
-    }
+    .amount-input-row:focus-within { border-color: var(--accent); }
     .currency-symbol {
-      padding: 0 14px;
-      font-size: 20px;
-      font-weight: 500;
-      color: var(--muted);
-      background: var(--bg);
+      padding: 0 14px; font-size: 20px; font-weight: 500;
+      color: var(--muted); background: var(--bg);
       border-right: 1.5px solid var(--border);
-      height: 56px;
-      display: flex;
-      align-items: center;
-      user-select: none;
+      height: 56px; display: flex; align-items: center; user-select: none;
     }
     #betrag {
-      flex: 1;
-      border: none;
-      outline: none;
+      flex: 1; border: none; outline: none;
       padding: 0 16px;
       font-family: 'DM Mono', monospace;
-      font-size: 22px;
-      font-weight: 500;
-      color: var(--text);
-      background: transparent;
-      height: 56px;
-      width: 100%;
-      -webkit-appearance: none;
+      font-size: 22px; font-weight: 500;
+      color: var(--text); background: transparent;
+      height: 56px; width: 100%; -webkit-appearance: none;
     }
     #betrag::placeholder { color: var(--border); }
 
-    /* ── Description ── */
-    .desc-block {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    /* button mode display */
+    .amount-display {
+      display: flex; align-items: center;
+      border: 1.5px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+      background: var(--bg);
     }
+    .amount-display .currency-symbol { background: var(--bg); }
+    .amount-display-value {
+      flex: 1; padding: 0 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 22px; font-weight: 500;
+      color: var(--text); height: 56px;
+      display: flex; align-items: center;
+    }
+    .amount-display-value.empty { color: var(--border); }
+
+    /* quick buttons grid */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+    }
+    .quick-btn {
+      border: 1.5px solid var(--border);
+      border-radius: 10px; background: transparent;
+      padding: 11px 4px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px; font-weight: 500;
+      color: var(--text); cursor: pointer;
+      transition: all 0.1s ease;
+      -webkit-tap-highlight-color: transparent;
+      text-align: center; line-height: 1.2;
+    }
+    .quick-btn:hover  { border-color: var(--accent); background: var(--bg); }
+    .quick-btn:active { transform: scale(0.95); }
+    .quick-btn.del-btn { font-size: 17px; color: var(--muted); }
+    .quick-btn.del-btn:hover { color: #C0392B; border-color: #C0392B; background: #fdf0ee; }
+
+    /* mode visibility */
+    .amount-block[data-mode="keyboard"] .quick-grid,
+    .amount-block[data-mode="keyboard"] .amount-display { display: none; }
+    .amount-block[data-mode="buttons"]  .amount-input-row { display: none; }
+
+    /* ── Description ── */
+    .desc-block { display: flex; flex-direction: column; gap: 8px; }
     #beschreibung {
       border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
+      border-radius: 12px; padding: 14px 16px;
       font-family: 'DM Sans', sans-serif;
-      font-size: 16px;
-      color: var(--text);
-      background: transparent;
-      outline: none;
-      resize: none;
-      transition: border-color 0.15s;
-      height: 80px;
+      font-size: 16px; color: var(--text);
+      background: transparent; outline: none;
+      resize: none; transition: border-color 0.15s; height: 80px;
     }
     #beschreibung::placeholder { color: var(--border); }
     #beschreibung:focus { border-color: var(--accent); }
 
     /* ── Categories ── */
-    .cat-block {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .cat-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
+    .cat-block { display: flex; flex-direction: column; gap: 10px; }
+    .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .cat-btn {
       border: 1.5px solid var(--border);
-      border-radius: 10px;
-      background: transparent;
+      border-radius: 10px; background: transparent;
       padding: 10px 8px;
       font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text);
-      cursor: pointer;
+      font-size: 13px; font-weight: 500;
+      color: var(--text); cursor: pointer;
       transition: all 0.12s ease;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
       -webkit-tap-highlight-color: transparent;
     }
-    .cat-btn .icon {
-      font-size: 18px;
-      line-height: 1;
-    }
-    .cat-btn:hover {
-      border-color: var(--accent);
-      background: var(--bg);
-    }
-    .cat-btn.active {
-      border-color: var(--accent);
-      background: var(--accent);
-      color: var(--accent-fg);
-    }
+    .cat-btn .icon { font-size: 18px; line-height: 1; }
+    .cat-btn:hover { border-color: var(--accent); background: var(--bg); }
+    .cat-btn.active { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
     .cat-btn.active .icon { filter: brightness(5); }
 
     /* ── Submit ── */
     .submit-btn {
-      width: 100%;
-      border: none;
-      border-radius: 12px;
-      background: var(--accent);
-      color: var(--accent-fg);
+      width: 100%; border: none; border-radius: 12px;
+      background: var(--accent); color: var(--accent-fg);
       font-family: 'DM Sans', sans-serif;
-      font-size: 16px;
-      font-weight: 600;
-      letter-spacing: 0.01em;
-      height: 54px;
-      cursor: pointer;
+      font-size: 16px; font-weight: 600; letter-spacing: 0.01em;
+      height: 54px; cursor: pointer;
       transition: opacity 0.15s, transform 0.1s;
       -webkit-tap-highlight-color: transparent;
     }
-    .submit-btn:hover { opacity: 0.88; }
+    .submit-btn:hover  { opacity: 0.88; }
     .submit-btn:active { transform: scale(0.98); }
     .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
@@ -228,47 +224,29 @@
     .toast {
       position: fixed;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: var(--success-bg);
-      color: var(--success);
-      border: 1px solid #B7E4C7;
-      border-radius: 100px;
-      padding: 12px 22px;
-      font-size: 14px;
-      font-weight: 500;
-      white-space: nowrap;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease, transform 0.25s ease;
-      z-index: 999;
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--success-bg); color: var(--success);
+      border: 1px solid #B7E4C7; border-radius: 100px;
+      padding: 12px 22px; font-size: 14px; font-weight: 500;
+      white-space: nowrap; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease; z-index: 999;
     }
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     /* ── Error ── */
-    .field-error {
-      font-size: 12px;
-      color: #C0392B;
-      margin-top: -4px;
-    }
+    .field-error { font-size: 12px; color: #C0392B; margin-top: -4px; }
 
     /* ── Date chip ── */
     .date-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 400;
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted); font-weight: 400;
     }
     .date-chip span { font-family: 'DM Mono', monospace; }
 
     @media (max-width: 380px) {
       .cat-grid { grid-template-columns: repeat(3, 1fr); }
       .cat-btn { font-size: 12px; }
+      .quick-btn { font-size: 12px; }
     }
   </style>
 </head>
@@ -283,8 +261,13 @@
   <div class="card">
 
     <!-- Betrag -->
-    <div class="amount-block">
-      <label for="betrag">Betrag</label>
+    <div class="amount-block" id="amount-block">
+      <div class="amount-label-row">
+        <label for="betrag">Betrag</label>
+        <button class="mode-toggle" id="mode-toggle">⌨ Tastatur</button>
+      </div>
+
+      <!-- Keyboard mode -->
       <div class="amount-input-row">
         <span class="currency-symbol">€</span>
         <input
@@ -297,6 +280,25 @@
           autocomplete="off"
         />
       </div>
+
+      <!-- Button mode: display -->
+      <div class="amount-display">
+        <span class="currency-symbol">€</span>
+        <span class="amount-display-value empty" id="amount-display-value">0,00</span>
+      </div>
+
+      <!-- Button mode: quick amounts -->
+      <div class="quick-grid">
+        <button class="quick-btn" data-val="0.50">50 ct</button>
+        <button class="quick-btn" data-val="1">1 €</button>
+        <button class="quick-btn" data-val="2">2 €</button>
+        <button class="quick-btn" data-val="5">5 €</button>
+        <button class="quick-btn" data-val="10">10 €</button>
+        <button class="quick-btn" data-val="20">20 €</button>
+        <button class="quick-btn" data-val="50">50 €</button>
+        <button class="quick-btn del-btn" id="del-btn">⌫</button>
+      </div>
+
       <span class="field-error" id="betrag-err" hidden>Bitte einen Betrag eingeben.</span>
     </div>
 
@@ -310,12 +312,12 @@
     <div class="cat-block">
       <label>Kategorie</label>
       <div class="cat-grid">
-        <button class="cat-btn" data-cat="Essen">        <span class="icon">🍽️</span> Essen</button>
-        <button class="cat-btn" data-cat="Fast-Food">   <span class="icon">🍔</span> Fast-Food</button>
-        <button class="cat-btn" data-cat="Trinken">     <span class="icon">☕</span> Trinken</button>
-        <button class="cat-btn" data-cat="Drogerie">    <span class="icon">🧴</span> Drogerie</button>
-        <button class="cat-btn" data-cat="Digitale">    <span class="icon">💻</span> Digitale</button>
-        <button class="cat-btn" data-cat="Sonstige">    <span class="icon">📦</span> Sonstige</button>
+        <button class="cat-btn" data-cat="Essen">     <span class="icon">🍽️</span> Essen</button>
+        <button class="cat-btn" data-cat="Fast-Food"> <span class="icon">🍔</span> Fast-Food</button>
+        <button class="cat-btn" data-cat="Trinken">   <span class="icon">☕</span> Trinken</button>
+        <button class="cat-btn" data-cat="Drogerie">  <span class="icon">🧴</span> Drogerie</button>
+        <button class="cat-btn" data-cat="Digitale">  <span class="icon">💻</span> Digitale</button>
+        <button class="cat-btn" data-cat="Sonstige">  <span class="icon">📦</span> Sonstige</button>
       </div>
       <span class="field-error" id="cat-err" hidden>Bitte eine Kategorie wählen.</span>
     </div>
@@ -332,16 +334,75 @@
 <div class="toast" id="toast">✓ Ausgabe eingetragen</div>
 
 <script>
-  // ── State
-  let selectedCat = null;
+  // ── Mode detection: touch = buttons, mouse = keyboard
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  let mode = isTouchDevice ? 'buttons' : 'keyboard';
+
+  const amountBlock  = document.getElementById('amount-block');
+  const modeToggle   = document.getElementById('mode-toggle');
+  const displayValue = document.getElementById('amount-display-value');
+  const betragInput  = document.getElementById('betrag');
+
+  // accumulator in cents (avoids float rounding issues)
+  let accCents = 0;
+
+  function setMode(m) {
+    mode = m;
+    amountBlock.dataset.mode = m;
+    modeToggle.textContent = m === 'buttons' ? '⌨ Tastatur' : '# Schnell';
+  }
+
+  setMode(mode);
+
+  modeToggle.addEventListener('click', () => {
+    const next = mode === 'buttons' ? 'keyboard' : 'buttons';
+    // sync value when switching
+    if (next === 'keyboard' && accCents > 0) {
+      betragInput.value = (accCents / 100).toFixed(2);
+    }
+    if (next === 'buttons') {
+      const parsed = parseFloat(betragInput.value);
+      if (!isNaN(parsed) && parsed > 0) {
+        accCents = Math.round(parsed * 100);
+        updateDisplay();
+      }
+    }
+    setMode(next);
+  });
+
+  function updateDisplay() {
+    if (accCents === 0) {
+      displayValue.textContent = '0,00';
+      displayValue.classList.add('empty');
+    } else {
+      displayValue.textContent = (accCents / 100).toFixed(2).replace('.', ',');
+      displayValue.classList.remove('empty');
+    }
+  }
+
+  // Quick amount buttons
+  document.querySelectorAll('.quick-btn[data-val]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      accCents += Math.round(parseFloat(btn.dataset.val) * 100);
+      updateDisplay();
+      document.getElementById('betrag-err').hidden = true;
+    });
+  });
+
+  // Delete / reset
+  document.getElementById('del-btn').addEventListener('click', () => {
+    accCents = 0;
+    updateDisplay();
+  });
 
   // ── Today
-  const today = new Date();
+  const today  = new Date();
   const dayNum = today.getDate();
-  const dateLabel = today.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
-  document.getElementById('today-display').textContent = dateLabel;
+  document.getElementById('today-display').textContent =
+    today.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
 
   // ── Category buttons
+  let selectedCat = null;
   document.querySelectorAll('.cat-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
@@ -353,12 +414,14 @@
 
   // ── Submit
   document.getElementById('submit-btn').addEventListener('click', () => {
-    const betragRaw = document.getElementById('betrag').value.trim();
     const beschreibung = document.getElementById('beschreibung').value.trim();
-
     let valid = true;
 
-    if (!betragRaw || isNaN(parseFloat(betragRaw)) || parseFloat(betragRaw) <= 0) {
+    let betragNum = mode === 'keyboard'
+      ? parseFloat(betragInput.value)
+      : accCents / 100;
+
+    if (!betragNum || isNaN(betragNum) || betragNum <= 0) {
       document.getElementById('betrag-err').hidden = false;
       valid = false;
     } else {
@@ -374,23 +437,13 @@
 
     if (!valid) return;
 
-    const betrag    = parseFloat(betragRaw).toFixed(2).replace('.', ',');
+    const betrag    = betragNum.toFixed(2).replace('.', ',');
     const desc      = beschreibung || '—';
     const kategorie = selectedCat;
     const datum     = String(dayNum);
 
     const base = 'https://docs.google.com/forms/d/e/1FAIpQLSdJBCSdlctmVTxIrMywL6HysqsfINqAgEtve3icHsYp2tpUUg/formResponse';
-    const params = new URLSearchParams({
-      'entry.26907830':   betrag,
-      'entry.514198582':  desc,
-      'entry.1689769809': kategorie,
-      'entry.1969182734': datum,
-      'submit':           'Submit'
-    });
 
-    const url = `${base}?${params.toString()}`;
-
-    // Submit via hidden iframe to avoid CORS/redirect issues
     let iframe = document.getElementById('submit-frame');
     if (!iframe) {
       iframe = document.createElement('iframe');
@@ -414,9 +467,7 @@
 
     for (const [name, value] of Object.entries(fields)) {
       const input = document.createElement('input');
-      input.type  = 'hidden';
-      input.name  = name;
-      input.value = value;
+      input.type = 'hidden'; input.name = name; input.value = value;
       form.appendChild(input);
     }
 
@@ -426,7 +477,9 @@
 
     // Reset
     setTimeout(() => {
-      document.getElementById('betrag').value = '';
+      betragInput.value = '';
+      accCents = 0;
+      updateDisplay();
       document.getElementById('beschreibung').value = '';
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       selectedCat = null;
