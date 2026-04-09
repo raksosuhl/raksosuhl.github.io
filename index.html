@@ -172,18 +172,43 @@
     .amount-block[data-mode="keyboard"] .amount-display { display: none; }
     .amount-block[data-mode="buttons"]  .amount-input-row { display: none; }
 
-    /* ── Description ── */
-    .desc-block { display: flex; flex-direction: column; gap: 8px; }
+    <!-- Beschreibung textarea -->
     #beschreibung {
       border: 1.5px solid var(--border);
       border-radius: 12px; padding: 14px 16px;
       font-family: 'DM Sans', sans-serif;
       font-size: 16px; color: var(--text);
       background: transparent; outline: none;
-      resize: none; transition: border-color 0.15s; height: 80px;
+      resize: none; transition: border-color 0.15s, opacity 0.15s; height: 80px;
+      width: 100%;
     }
     #beschreibung::placeholder { color: var(--border); }
     #beschreibung:focus { border-color: var(--accent); }
+    #beschreibung.dimmed {
+      background: var(--bg);
+      color: var(--muted);
+      border-color: var(--border);
+    }
+
+    /* ── Suggestion chips ── */
+    .suggestion-block { display: flex; flex-direction: column; gap: 8px; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip {
+      border: 1.5px solid var(--border);
+      border-radius: 100px;
+      background: transparent;
+      padding: 7px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500;
+      color: var(--text); cursor: pointer;
+      transition: all 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chip:hover { border-color: var(--accent); background: var(--bg); }
+    .chip.active { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+
+    /* ── desc-block ── */
+    .desc-block { display: flex; flex-direction: column; gap: 8px; }
 
     /* ── Categories ── */
     .cat-block { display: flex; flex-direction: column; gap: 10px; }
@@ -296,12 +321,6 @@
       <span class="field-error" id="betrag-err" hidden>Bitte einen Betrag eingeben.</span>
     </div>
 
-    <!-- Beschreibung -->
-    <div class="desc-block">
-      <label for="beschreibung">Beschreibung</label>
-      <textarea id="beschreibung" placeholder="Wofür war die Ausgabe?"></textarea>
-    </div>
-
     <!-- Kategorie -->
     <div class="cat-block">
       <label>Kategorie</label>
@@ -316,6 +335,18 @@
       <span class="field-error" id="cat-err" hidden>Bitte eine Kategorie wählen.</span>
     </div>
 
+    <!-- Vorschläge (dynamisch) -->
+    <div class="suggestion-block" id="suggestion-block" hidden>
+      <label id="suggestion-label">Vorschlag</label>
+      <div class="chip-row" id="chip-row"></div>
+    </div>
+
+    <!-- Beschreibung (dynamisch) -->
+    <div class="desc-block" id="desc-block" hidden>
+      <label for="beschreibung">Beschreibung</label>
+      <textarea id="beschreibung" placeholder="Wofür war die Ausgabe?"></textarea>
+    </div>
+
     <!-- Date info -->
     <p class="date-chip">📅 Heute: <span id="today-display"></span></p>
 
@@ -328,7 +359,29 @@
 <div class="toast" id="toast">✓ Ausgabe eingetragen</div>
 
 <script>
-  // ── Mode detection: touch = buttons, mouse = keyboard
+  // ── Suggestions config (label + icon)
+  const SUGGESTIONS = {
+    'Essen':     null,
+    'Fast-Food': [
+      { label: 'McDonalds',     icon: '🍟' },
+      { label: 'Burger King',   icon: '👑' },
+      { label: 'Pizza',         icon: '🍕' },
+      { label: 'Asiate',        icon: '🥡' },
+      { label: 'Döner',         icon: '🌯' },
+      { label: 'Bäcker',        icon: '🥐' },
+      { label: 'Sonstige Snacks', icon: '🍿' },
+    ],
+    'Trinken': [
+      { label: 'Softdrink', icon: '🥤' },
+      { label: 'Alkohol',   icon: '🍺' },
+    ],
+    'Drogerie':  null,
+    'Digitale':  [],
+    'Sonstige':  [],
+  };
+  const AUTO_DESC = { 'Drogerie': 'Drogerie' };
+
+  // ── Mode detection
   const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   let mode = isTouchDevice ? 'buttons' : 'keyboard';
 
@@ -336,8 +389,6 @@
   const modeToggle   = document.getElementById('mode-toggle');
   const displayValue = document.getElementById('amount-display-value');
   const betragInput  = document.getElementById('betrag');
-
-  // accumulator in cents (avoids float rounding issues)
   let accCents = 0;
 
   function setMode(m) {
@@ -345,36 +396,23 @@
     amountBlock.dataset.mode = m;
     modeToggle.textContent = m === 'buttons' ? '⌨ Tastatur' : '# Schnell';
   }
-
   setMode(mode);
 
   modeToggle.addEventListener('click', () => {
     const next = mode === 'buttons' ? 'keyboard' : 'buttons';
-    // sync value when switching
-    if (next === 'keyboard' && accCents > 0) {
-      betragInput.value = (accCents / 100).toFixed(2);
-    }
+    if (next === 'keyboard' && accCents > 0) betragInput.value = (accCents / 100).toFixed(2);
     if (next === 'buttons') {
-      const parsed = parseFloat(betragInput.value);
-      if (!isNaN(parsed) && parsed > 0) {
-        accCents = Math.round(parsed * 100);
-        updateDisplay();
-      }
+      const p = parseFloat(betragInput.value);
+      if (!isNaN(p) && p > 0) { accCents = Math.round(p * 100); updateDisplay(); }
     }
     setMode(next);
   });
 
   function updateDisplay() {
-    if (accCents === 0) {
-      displayValue.textContent = '0,00';
-      displayValue.classList.add('empty');
-    } else {
-      displayValue.textContent = (accCents / 100).toFixed(2).replace('.', ',');
-      displayValue.classList.remove('empty');
-    }
+    if (accCents === 0) { displayValue.textContent = '0,00'; displayValue.classList.add('empty'); }
+    else { displayValue.textContent = (accCents / 100).toFixed(2).replace('.', ','); displayValue.classList.remove('empty'); }
   }
 
-  // Quick amount buttons
   document.querySelectorAll('.quick-btn[data-val]').forEach(btn => {
     btn.addEventListener('click', () => {
       accCents += Math.round(parseFloat(btn.dataset.val) * 100);
@@ -382,12 +420,7 @@
       document.getElementById('betrag-err').hidden = true;
     });
   });
-
-  // Delete / reset
-  document.getElementById('del-btn').addEventListener('click', () => {
-    accCents = 0;
-    updateDisplay();
-  });
+  document.getElementById('del-btn').addEventListener('click', () => { accCents = 0; updateDisplay(); });
 
   // ── Today
   const today  = new Date();
@@ -395,20 +428,79 @@
   document.getElementById('today-display').textContent =
     today.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  // ── Category buttons
-  let selectedCat = null;
+  // ── State
+  let selectedCat  = null;
+  let selectedChip = null; // chip label or null
+
+  const suggestionBlock = document.getElementById('suggestion-block');
+  const chipRow         = document.getElementById('chip-row');
+  const descBlock       = document.getElementById('desc-block');
+  const beschreibung    = document.getElementById('beschreibung');
+
+  // ── Category selection
   document.querySelectorAll('.cat-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      selectedCat = btn.dataset.cat;
+      selectedCat  = btn.dataset.cat;
+      selectedChip = null;
       document.getElementById('cat-err').hidden = true;
+      updateDescUI();
     });
   });
 
+  function updateDescUI() {
+    const suggestions = SUGGESTIONS[selectedCat];
+    chipRow.innerHTML = '';
+    selectedChip = null;
+    beschreibung.value = '';
+    beschreibung.classList.remove('dimmed');
+    beschreibung.removeAttribute('readonly');
+
+    // No desc categories
+    if (selectedCat === 'Essen' || selectedCat === 'Drogerie') {
+      suggestionBlock.hidden = true;
+      descBlock.hidden = true;
+      return;
+    }
+
+    // Categories with suggestion chips
+    if (suggestions && suggestions.length > 0) {
+      suggestionBlock.hidden = false;
+      descBlock.hidden = false; // show initially (no chip selected yet)
+
+      suggestions.forEach(({ label, icon }) => {
+        const chip = document.createElement('button');
+        chip.className = 'chip';
+        chip.innerHTML = `${icon} ${label}`;
+        chip.addEventListener('click', () => {
+          if (selectedChip === label) {
+            // deselect → show textbox again
+            chip.classList.remove('active');
+            selectedChip = null;
+            beschreibung.value = '';
+            descBlock.hidden = false;
+          } else {
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            selectedChip = label;
+            beschreibung.value = label;
+            // hide textbox when chip is selected
+            descBlock.hidden = true;
+          }
+        });
+        chipRow.appendChild(chip);
+      });
+      return;
+    }
+
+    // Free text only (Digitale, Sonstige)
+    suggestionBlock.hidden = true;
+    descBlock.hidden = false;
+  }
+
   // ── Submit
   document.getElementById('submit-btn').addEventListener('click', () => {
-    const beschreibung = document.getElementById('beschreibung').value.trim();
     let valid = true;
 
     let betragNum = mode === 'keyboard'
@@ -431,8 +523,17 @@
 
     if (!valid) return;
 
+    // Determine description
+    let desc = '';
+    if (AUTO_DESC[selectedCat]) {
+      desc = AUTO_DESC[selectedCat];
+    } else if (selectedCat === 'Essen') {
+      desc = '';
+    } else {
+      desc = beschreibung.value.trim() || '';
+    }
+
     const betrag    = betragNum.toFixed(2).replace('.', ',');
-    const desc      = beschreibung || '—';
     const kategorie = selectedCat;
     const datum     = String(dayNum);
 
@@ -441,16 +542,13 @@
     let iframe = document.getElementById('submit-frame');
     if (!iframe) {
       iframe = document.createElement('iframe');
-      iframe.id = 'submit-frame';
-      iframe.name = 'submit-frame';
+      iframe.id = 'submit-frame'; iframe.name = 'submit-frame';
       iframe.style.display = 'none';
       document.body.appendChild(iframe);
     }
 
     const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = base;
-    form.target = 'submit-frame';
+    form.method = 'POST'; form.action = base; form.target = 'submit-frame';
 
     const fields = {
       'entry.26907830':   betrag,
@@ -474,9 +572,14 @@
       betragInput.value = '';
       accCents = 0;
       updateDisplay();
-      document.getElementById('beschreibung').value = '';
+      beschreibung.value = '';
+      beschreibung.classList.remove('dimmed');
+      beschreibung.removeAttribute('readonly');
+      chipRow.innerHTML = '';
+      suggestionBlock.hidden = true;
+      descBlock.hidden = true;
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-      selectedCat = null;
+      selectedCat = null; selectedChip = null;
       showToast();
     }, 300);
   });
