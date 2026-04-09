@@ -3,370 +3,435 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🌙 Abendroutine Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <title>🌙 Abendroutine</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { transition: background 0.4s; }
+    @keyframes tabIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
     @keyframes spinOnce    { from{transform:rotate(0deg)}   to{transform:rotate(360deg)} }
     @keyframes spinReverse { from{transform:rotate(360deg)} to{transform:rotate(0deg)}   }
-    @keyframes tabIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
-    .icon-spin  { display:inline-block; animation:spinOnce    0.45s cubic-bezier(.36,.07,.19,.97) }
-    .icon-spinr { display:inline-block; animation:spinReverse 0.45s cubic-bezier(.36,.07,.19,.97) }
-    .tab-anim   { animation:tabIn 0.2s ease-out }
-    ::-webkit-scrollbar{width:5px}
-    ::-webkit-scrollbar-thumb{border-radius:99px;background:rgba(128,128,128,0.25)}
-    input[type=range] { -webkit-appearance:none; appearance:none; height:4px; border-radius:99px; outline:none; cursor:pointer; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,0.25); }
+    .tab-anim  { animation: tabIn 0.2s ease-out; }
+    .icon-spin { display:inline-block; animation: spinOnce    0.45s cubic-bezier(.36,.07,.19,.97); }
+    .icon-spinr{ display:inline-block; animation: spinReverse 0.45s cubic-bezier(.36,.07,.19,.97); }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { border-radius: 99px; background: rgba(128,128,128,0.2); }
+
+    /* native time input – unified look */
+    input[type="time"] {
+      font-family: 'DM Mono', monospace;
+      font-size: 22px;
+      font-weight: 500;
+      border: none;
+      outline: none;
+      background: transparent;
+      cursor: pointer;
+      -webkit-appearance: none;
+      padding: 0;
+    }
+    input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: pointer; }
+    input[type="number"] {
+      font-family: 'DM Mono', monospace;
+      font-weight: 600;
+      border: none; outline: none; background: transparent; cursor: pointer;
+      text-align: center;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      height: 4px; border-radius: 99px; outline: none; cursor: pointer; width: 100%;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 16px; height: 16px;
+      border-radius: 50%; cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
   </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect } = React;
+const { useState, useEffect, useCallback } = React;
 
+/* ── helpers ── */
 function isAutoTime() { const h = new Date().getHours(); return h >= 20 || h < 7; }
-function timeToMins(str){const[h,m]=str.split(":").map(Number);return h*60+m;}
-function minsToTime(mins){const t=((mins%1440)+1440)%1440;return`${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;}
+function timeToMins(str) { const [h,m] = str.split(":").map(Number); return h*60+m; }
+function minsToTime(mins) {
+  const t = ((mins % 1440) + 1440) % 1440;
+  return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;
+}
+function nowTime() {
+  const n = new Date();
+  return `${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}`;
+}
+function fmtDur(mins) {
+  const h = Math.floor(mins/60), m = mins%60;
+  return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+}
 
-const L={
-  bg:"#F7F5F0",hdrBg:"#fff",hdrBorder:"#E5E2DA",
-  ctrlBg:"#F7F5F0",ctrlBorder:"#E5E2DA",sep:"#E5E2DA",
-  text:"#1a1a1a",sub:"#888",muted:"#BBB",
-  progBg:"#E5E2DA",
-  cardBg:(light,dn)=>dn?"#FAFAFA":light,
-  cardBorder:(acc,dn,hi)=>dn?"#E5E2DA":hi?acc:acc+"40",
-  exBg:(w)=>w?"#FEF8F2":"#fff",exBorder:(w)=>w?"#F0C896":"#E5E2DA",
-  exBodyBorder:"#F0EDE7",
-  warnBg:"#FEF3E2",warnColor:"#A04000",
-  okBg:"#F0FAF5",okColor:"#1A6B45",
-  sci:"rgba(255,255,255,0.88)",
-  wkBg:"#FFFBEB",wkBorder:"#F5CBA7",wkTitle:"#B7770D",wkText:"#7D6608",
-  toggleTrackOff:"#E5E2DA",toggleTrackOn:"#4A6FA0",
-  knobBg:"#fff",
-  infoWarnBg:"#FEF3E2",infoWarnBorder:"#F0C896",infoWarnText:"#784212",
-  errBg:"#FDEDEC",errBorder:"#F5B7B1",errText:"#922B21",
-  tipBg:"#E8722A15",tipBorder:"#E8722A30",tipText:"#333",
-  shortBg:"#EBF5FB",shortBorder:"#AED6F1",shortText:"#1A5276",
-  tabBg:"transparent",tabActive:"#3D5A80",
-  filterBorder:"#DDD",filterActiveBg:"#3D5A80",filterActiveColor:"#fff",filterColor:"#888",
-  modeActBed:"#3D5A80",modeActWake:"#1A9862",
-  toggleOffBg:"#E5E2DA",toggleOnBg:"#0097A7",
+/* ── themes ── */
+const L = {
+  bg:"#F7F5F0", hdr:"#fff", hdrB:"#E8E5DD",
+  ctrl:"#F0EDE6", ctrlB:"#E0DDD6", sep:"#E0DDD6",
+  text:"#1a1a1a", sub:"#888", muted:"#bbb",
+  prog:"#E5E2DA",
+  card:(light,done)=>done?"#F5F4F1":light,
+  cardB:(acc,done,hi)=>done?"#DDD":hi?acc:acc+"40",
+  exBg:(w)=>w?"#FEF8F2":"#fff", exB:(w)=>w?"#F0C896":"#E5E2DA",
+  exBodyB:"#F0EDE7",
+  warnBg:"#FEF3E2", warnC:"#A04000",
+  okBg:"#F0FAF5", okC:"#1A6B45",
+  sci:"rgba(255,255,255,0.9)",
+  wkBg:"#FFFBEB", wkB:"#F5CBA7", wkTitle:"#B7770D", wkText:"#7D6608",
+  tipBg:"#E8722A12", tipB:"#E8722A30", tipC:"#444",
+  shortBg:"#EBF5FB", shortB:"#AED6F1", shortC:"#1A5276",
+  errBg:"#FDEDEC", errB:"#F5B7B1", errC:"#922B21",
+  infoWBg:"#FEF3E2", infoWB:"#F0C896", infoWC:"#784212",
+  tabAct:"#3D5A80", filterAct:"#3D5A80",
+  bedAct:"#3D5A80", wakeAct:"#1A9862",
+  timeBg:"#F0EDE6", timeB:"#D8D4CC",
+  nowBtn:"#3D5A80",
+  toggleOff:"#D0CCC4",
 };
-const D={
-  bg:"#1C1C18",hdrBg:"#242420",hdrBorder:"#333330",
-  ctrlBg:"#1C1C18",ctrlBorder:"#3A3A35",sep:"#333330",
-  text:"#E8E6DE",sub:"#88887A",muted:"#505048",
-  progBg:"#333330",
-  cardBg:(_,dn)=>dn?"#242420":"#2A2A26",
-  cardBorder:(acc,dn,hi)=>dn?"#333330":hi?acc:acc+"55",
-  exBg:(w)=>w?"#2E2818":"#242420",exBorder:(w)=>w?"#5A4020":"#333330",
-  exBodyBorder:"#333330",
-  warnBg:"#3A2208",warnColor:"#E09050",
-  okBg:"#0E2818",okColor:"#60C090",
+const D = {
+  bg:"#1C1C18", hdr:"#242420", hdrB:"#333330",
+  ctrl:"#1C1C18", ctrlB:"#3A3A35", sep:"#333330",
+  text:"#E8E6DE", sub:"#88887A", muted:"#505048",
+  prog:"#333330",
+  card:(_,done)=>done?"#242420":"#2A2A26",
+  cardB:(acc,done,hi)=>done?"#3A3A35":hi?acc:acc+"55",
+  exBg:(w)=>w?"#2E2818":"#242420", exB:(w)=>w?"#5A4020":"#333330",
+  exBodyB:"#333330",
+  warnBg:"#3A2208", warnC:"#E09050",
+  okBg:"#0E2818", okC:"#60C090",
   sci:"rgba(28,28,22,0.92)",
-  wkBg:"#28250E",wkBorder:"#5A4A18",wkTitle:"#D4A040",wkText:"#A08840",
-  toggleTrackOff:"#3A3A35",toggleTrackOn:"#4A6FA0",
-  knobBg:"#1C1C18",
-  infoWarnBg:"#3A2208",infoWarnBorder:"#5A3818",infoWarnText:"#D4A060",
-  errBg:"#3A0808",errBorder:"#5A1818",errText:"#E08080",
-  tipBg:"#3A281088",tipBorder:"#5A3A18",tipText:"#D4A060",
-  shortBg:"#0E2030",shortBorder:"#1A4060",shortText:"#80C0E0",
-  tabBg:"transparent",tabActive:"#4A6FA0",
-  filterBorder:"#3A3A35",filterActiveBg:"#4A6FA0",filterActiveColor:"#fff",filterColor:"#88887A",
-  modeActBed:"#4A6FA0",modeActWake:"#1A9862",
-  toggleOffBg:"#3A3A35",toggleOnBg:"#0097A7",
+  wkBg:"#28250E", wkB:"#5A4A18", wkTitle:"#D4A040", wkText:"#A08840",
+  tipBg:"#3A2810AA", tipB:"#5A3A18", tipC:"#D4A060",
+  shortBg:"#0E2030", shortB:"#1A4060", shortC:"#80C0E0",
+  errBg:"#3A0808", errB:"#5A1818", errC:"#E08080",
+  infoWBg:"#3A2208", infoWB:"#5A3818", infoWC:"#D4A060",
+  tabAct:"#4A6FA0", filterAct:"#4A6FA0",
+  bedAct:"#4A6FA0", wakeAct:"#1A9862",
+  timeBg:"#2A2A26", timeB:"#3A3A35",
+  nowBtn:"#4A6FA0",
+  toggleOff:"#3A3A35",
 };
 
-// BLOCKS – ohne "meal"
-const BASE_BLOCKS=[
-  {id:"blue",    offset:-120,dur:0,  emoji:"💡",accent:"#D4A017",light:"#FEFAEB",
-   title:"Blaues Licht reduzieren",short:"Night Shift aktivieren · Raumlicht dimmen auf <10 Lux",
-   detail:"Blaues Licht (~480 nm) blockiert Melatoninausschüttung um bis zu 3 Stunden. Aktiviere Night Shift / f.lux auf allen Geräten. Deckenlampe durch Stehlampe oder Kerze ersetzen. Blaulichtfilterbrille optional. Social Media jetzt weglegen – kognitiver Arousal ist der #1-Schlafkiller.",
+/* ── DATA ── */
+const BASE_BLOCKS = [
+  {id:"blue",    baseOff:-1.00, dur:0,  emoji:"💡",accent:"#D4A017",light:"#FEFAEB",
+   title:"Blaues Licht reduzieren",short:"Night Shift aktivieren · Raumlicht dimmen",
+   detail:"Blaues Licht (~480 nm) blockiert Melatoninausschüttung um bis zu 3 Stunden. Aktiviere Night Shift / f.lux auf allen Geräten. Deckenlampe durch Stehlampe oder Kerze ersetzen. Social Media weglegen – kognitiver Arousal ist der #1-Schlafkiller.",
    science:"Chang et al. (2015), PNAS – LED-Bildschirme vor Schlaf verzögern Einschlafzeit & reduzieren REM-Anteil signifikant"},
-  {id:"supps1",  offset:-90, dur:5,  emoji:"💊",accent:"#2E86C1",light:"#EBF5FB",
+  {id:"supps1",  baseOff:-0.75, dur:5,  emoji:"💊",accent:"#2E86C1",light:"#EBF5FB",
    title:"Supplements zur Mahlzeit",short:"Omega 3 · Vitamin D3/K2 · Creatin",
-   detail:"Diese Supplements brauchen Fett zur Absorption oder sind zeitunabhängig:\n• Omega 3 (3g EPA/DHA): Mit fettreicher Mahlzeit – stark anti-inflammatorisch, besonders relevant für dein Knieödem!\n• Vitamin D3 (3000 IU) + K2 MK-7 (200µg): Immer mit Fett einnehmen, sonst kaum Wirkung\n• Creatin (5g): Zeitpunkt egal, täglich konsistent",
+   detail:"• Omega 3 (3g EPA/DHA): Mit fettreicher Mahlzeit\n• Vitamin D3 (3000 IU) + K2 MK-7 (200µg): Immer mit Fett\n• Creatin (5g): Zeitpunkt egal, täglich konsistent",
    science:"Heaney et al. (2012) – D3-Absorption steigt um 56% mit fettreicher Mahlzeit"},
-  {id:"move",    offset:-75, dur:30, emoji:"🧘",accent:"#1A9862",light:"#EAFAF1",highlight:true,
-   title:"Foam Roll & Stretching",short:"30 Min · Knie-schonend · Tab Bewegung für alle Übungen",
-   detail:"Foam Rolling senkt Muskelspannung, verbessert Durchblutung und beschleunigt Regeneration. WICHTIG: Kein direktes Rollen auf dem Knie oder Ödembereich! Umliegende Muskeln (Quad, IT-Band, Wade, Hamstring, Gesäß) entlasten das Knie. Dehnen danach aktiviert den Parasympathikus.",
-   science:"Wiewelhove et al. (2019) – Foam Rolling nach Training reduziert DOMS & verbessert Range of Motion signifikant"},
-  {id:"shower",  offset:-40, dur:10, emoji:"🚿",accent:"#0097A7",light:"#E0F7FA",
-   title:"Warme Dusche",short:"37–40°C · 10 Min · kein kaltes Wasser direkt vor Bett",
-   detail:"Warmes Wasser erhöht kurzfristig die Körperkerntemperatur. Der anschließende Temperaturabfall signalisiert dem Körper Schlafbereitschaft. 1–2h vor dem Schlafen ist optimal.",
-   science:"Haghayegh et al. (2019) – Warme Dusche 1–2h vor Schlaf verkürzt Einschlafzeit um durchschnittlich 36%"},
-  {id:"supps2",  offset:-30, dur:5,  emoji:"🌙",accent:"#7B3FA0",light:"#F5EBF9",
+  {id:"move",    baseOff:-0.58, dur:30, emoji:"🧘",accent:"#1A9862",light:"#EAFAF1",highlight:true,
+   title:"Foam Roll & Stretching",short:"30 Min · Knie-schonend",
+   detail:"Foam Rolling senkt Muskelspannung und beschleunigt Regeneration. WICHTIG: Kein direktes Rollen auf dem Knie oder Ödembereich! Umliegende Muskeln entlasten das Knie.",
+   science:"Wiewelhove et al. (2019) – Foam Rolling reduziert DOMS & verbessert Range of Motion"},
+  {id:"shower",  baseOff:-0.33, dur:10, emoji:"🚿",accent:"#0097A7",light:"#E0F7FA",
+   title:"Warme Dusche",short:"37–40°C · 10 Min",
+   detail:"Warmes Wasser erhöht kurzfristig die Körperkerntemperatur. Der anschließende Temperaturabfall signalisiert dem Körper Schlafbereitschaft.",
+   science:"Haghayegh et al. (2019) – Warme Dusche 1–2h vor Schlaf verkürzt Einschlafzeit um 36%",
+   hasToggle: true},
+  {id:"supps2",  baseOff:-0.22, dur:5,  emoji:"🌙",accent:"#7B3FA0",light:"#F5EBF9",
    title:"Abend-Supplements",short:"Magnesium Glycinat · Zink · NAC",
-   detail:"Diese drei zusammen 30 Min vor dem Schlafen:\n• Magnesium Glycinat (450mg): GABA-Modulation → tieferer Slow-Wave-Sleep\n• Zink (25mg): Testosteron, Immunsystem, Schlafqualität\n• NAC (600mg): Anti-inflammatorisch → relevant für dein Knieödem. JA – nachbestellen!\n\n⚠️ Zink und Eisen NIEMALS zusammen – mind. 6h Abstand!",
-   science:"Held et al. (2002) – Magnesium erhöht Slow-Wave-Sleep; Rondanelli et al. (2011) – Zn+Mg verbessern Schlafqualität"},
-  {id:"winddown",offset:-20, dur:20, emoji:"📖",accent:"#3D5A80",light:"#EAF0F9",
+   detail:"30 Min vor dem Schlafen:\n• Magnesium Glycinat (450mg): GABA-Modulation → tieferer Slow-Wave-Sleep\n• Zink (25mg): Testosteron, Immunsystem, Schlafqualität\n• NAC (600mg): Anti-inflammatorisch → Knieödem\n\n⚠️ Zink und Eisen NIEMALS zusammen – mind. 6h Abstand!",
+   science:"Held et al. (2002) – Magnesium erhöht Slow-Wave-Sleep"},
+  {id:"winddown",baseOff:-0.14, dur:20, emoji:"📖",accent:"#3D5A80",light:"#EAF0F9",
    title:"Wind-Down Ritual",short:"Lesen · Box Breathing · Dankbarkeitsjournal",
    detail:"Parasympathikus aktiv einschalten:\n• Box Breathing: 4s ein – 4s halten – 4s aus – 4s halten (3–5 Min)\n• Physisches Buch lesen (kein Bildschirm!)\n• 3 Dinge aufschreiben, für die du dankbar bist\n• Raumtemperatur 18–20°C · Handy auf Flugmodus",
    science:"Harvey & Farrell (2003) – Pre-sleep kognitiver Arousal ist Hauptursache für Einschlafschwierigkeiten"},
-  {id:"sleep",   offset:0,   dur:0,  emoji:"😴",accent:"#2C3E50",light:"#F4F6F7",
+  {id:"sleep",   baseOff: 0,    dur:0,  emoji:"😴",accent:"#2C3E50",light:"#F4F6F7",
    title:"Schlafenszeit",short:"Dunkel · 18–20°C · kein Handy im Schlafzimmer",
-   detail:"Optimale Schlafumgebung:\n• Blackout-Vorhänge oder Schlafmaske\n• Ohrstöpsel oder weißes Rauschen bei Lärm\n• Handy außerhalb Schlafzimmer\n• Nasenklebeband für reine Nasenatmung",
+   detail:"Optimale Schlafumgebung:\n• Blackout-Vorhänge oder Schlafmaske\n• Ohrstöpsel oder weißes Rauschen\n• Handy außerhalb Schlafzimmer\n• Nasenklebeband für reine Nasenatmung",
    science:"Walker (2017) – Why We Sleep; Grandner et al. (2010) – Schlafumgebungsoptimierung +18% Schlafeffizienz"},
 ];
 
 const EX=[
-  {t:"foam",n:"Quadrizeps",s:"je Seite",d:"2 Min",e:"🦵",w:true,i:"Auf dem Bauch, Foam Roll unter dem Oberschenkel. Langsam von der Hüfte bis 5–6 cm OBERHALB der Kniescheibe rollen. Bei einem Druckpunkt 20–30 Sek halten.",warn:"⚠️ Knie komplett auslassen! Stop mindestens 5–6 cm vor der Kniescheibe."},
-  {t:"foam",n:"IT-Band / TFL",s:"je Seite",d:"90 Sek",e:"↔️",w:true,i:"Seitenlage, Foam Roll unter der Außenseite des Oberschenkels. Von der Hüfte bis 5 cm oberhalb des Knieaußenrandes. Oberes Bein abstützen.",warn:"⚠️ Nie auf dem Kniegelenk oder Schienbein rollen!"},
-  {t:"foam",n:"Waden (Gastrocnemius)",s:"je Seite",d:"90 Sek",e:"🦶",w:false,i:"Sitzend, Foam Roll unter der Wade. Hände abstützen, das andere Bein überkreuzen für mehr Druck.",warn:null},
+  {t:"foam",n:"Quadrizeps",s:"je Seite",d:"2 Min",e:"🦵",w:true,i:"Auf dem Bauch, Foam Roll unter dem Oberschenkel. Langsam von der Hüfte bis 5–6 cm OBERHALB der Kniescheibe rollen.",warn:"⚠️ Knie komplett auslassen! Stop mindestens 5–6 cm vor der Kniescheibe."},
+  {t:"foam",n:"IT-Band / TFL",s:"je Seite",d:"90 Sek",e:"↔️",w:true,i:"Seitenlage, Foam Roll unter der Außenseite des Oberschenkels. Von der Hüfte bis 5 cm oberhalb des Knieaußenrandes.",warn:"⚠️ Nie auf dem Kniegelenk rollen!"},
+  {t:"foam",n:"Waden",s:"je Seite",d:"90 Sek",e:"🦶",w:false,i:"Sitzend, Foam Roll unter der Wade. Hände abstützen, das andere Bein überkreuzen für mehr Druck.",warn:null},
   {t:"foam",n:"Hamstrings",s:"je Seite",d:"90 Sek",e:"🔙",w:true,i:"Sitzend, von der Gesäßfalte bis 5 cm oberhalb der Kniekehle rollen.",warn:"⚠️ Kniekehle auslassen – 5 cm Abstand halten!"},
-  {t:"foam",n:"Gesäß / Piriformis",s:"je Seite",d:"2 Min",e:"🍑",w:false,i:"Sitzend auf dem Foam Roll in Figur-4-Position. Körpergewicht auf die Gesäßseite, kleine Kreise.",warn:null},
-  {t:"stretch",n:"Quadrizeps-Stretch",s:"je Seite",d:"45 Sek",e:"🦵",w:true,i:"Stehend: Ferse zur Gesäßfalte ziehen, an Wand stützen. Schonendere Alternative: In Bauchlage.",warn:"⚠️ Nur bis zur Dehngrenze – kein Schmerz im Knie! Bei Schmerzen: Bauchlage-Variante."},
-  {t:"stretch",n:"Hüftbeuger-Ausfallschritt",s:"je Seite",d:"60 Sek",e:"🏃",w:false,i:"Im Kniestand, vorderes Bein nach vorne. Becken nach vorne schieben. Kissen unter das hintere Knie.",warn:null},
-  {t:"stretch",n:"Hamstring (liegend)",s:"je Seite",d:"45 Sek",e:"📐",w:false,i:"Rückenlage. Ein Bein gerade anheben, Hände hinter der Oberschenkelrückseite. Ferse zur Decke.",warn:null},
-  {t:"stretch",n:"Wade Gastrocnemius",s:"je Seite",d:"45 Sek",e:"↕️",w:false,i:"Wandstütz: Hinteres Bein gestreckt, Ferse am Boden. Knie durchgedrückt halten.",warn:null},
-  {t:"stretch",n:"Wade Soleus",s:"je Seite",d:"45 Sek",e:"↕️",w:false,i:"Wie Gastrocnemius, aber hinteres Knie leicht beugen. Dehnt den tiefer liegenden Soleus.",warn:null},
-  {t:"stretch",n:"Taubenpose (Piriformis)",s:"je Seite",d:"60 Sek",e:"🕊️",w:true,i:"Vorderes Bein ~90° vor dem Körper, hinteres Bein gestreckt. Schonendere Variante: Figur-4-Stretch auf dem Rücken.",warn:"⚠️ Bei Kniebeschwerden unbedingt die Rückenlage-Variante (Figur-4) wählen!"},
-  {t:"stretch",n:"Kindpose (Abschluss)",s:"—",d:"60 Sek",e:"🧸",w:false,i:"Knieend, Gesäß zu den Fersen, Arme nach vorne. Tief einatmen, bei Ausatmung tiefer sinken.",warn:"Falls Kniebeugen schmerzt: Kissen unter die Knie legen."},
+  {t:"foam",n:"Gesäß / Piriformis",s:"je Seite",d:"2 Min",e:"🍑",w:false,i:"Sitzend in Figur-4-Position. Körpergewicht auf die Gesäßseite, kleine Kreise.",warn:null},
+  {t:"stretch",n:"Quadrizeps-Stretch",s:"je Seite",d:"45 Sek",e:"🦵",w:true,i:"Stehend: Ferse zur Gesäßfalte ziehen, an Wand stützen. Schonendere Alternative: Bauchlage.",warn:"⚠️ Nur bis zur Dehngrenze – kein Schmerz im Knie!"},
+  {t:"stretch",n:"Hüftbeuger",s:"je Seite",d:"60 Sek",e:"🏃",w:false,i:"Im Kniestand, vorderes Bein nach vorne. Becken nach vorne schieben. Kissen unter das hintere Knie.",warn:null},
+  {t:"stretch",n:"Hamstring (liegend)",s:"je Seite",d:"45 Sek",e:"📐",w:false,i:"Rückenlage. Ein Bein gerade anheben, Hände hinter der Oberschenkelrückseite.",warn:null},
+  {t:"stretch",n:"Wade Gastrocnemius",s:"je Seite",d:"45 Sek",e:"↕️",w:false,i:"Wandstütz: Hinteres Bein gestreckt, Ferse am Boden.",warn:null},
+  {t:"stretch",n:"Wade Soleus",s:"je Seite",d:"45 Sek",e:"↕️",w:false,i:"Wie Gastrocnemius, aber hinteres Knie leicht beugen.",warn:null},
+  {t:"stretch",n:"Taubenpose",s:"je Seite",d:"60 Sek",e:"🕊️",w:true,i:"Vorderes Bein ~90° vor dem Körper, hinteres Bein gestreckt. Schonender: Figur-4 auf dem Rücken.",warn:"⚠️ Bei Kniebeschwerden: Rückenlage-Variante wählen!"},
+  {t:"stretch",n:"Kindpose",s:"—",d:"60 Sek",e:"🧸",w:false,i:"Knieend, Gesäß zu den Fersen, Arme nach vorne. Tief einatmen, bei Ausatmung tiefer sinken.",warn:"Falls Kniebeugen schmerzt: Kissen unter die Knie."},
 ];
 
 const SUPPS=[
-  {time:"morning",n:"Eisen + Vitamin C",dose:"18–25 mg Eisen · 200 mg Vit C",e:"🔴",acc:"#C0392B",badge:"Morgens",p:false,when:"Morgens nüchtern, 30 Min vor Frühstück",why:"Vitamin C steigert Eisen-Absorption um bis zu 300%. Nüchtern: keine Konkurrenz durch Kalzium, Zink oder Phytate.",compat:"NIEMALS zusammen mit Zink, Kalzium oder Magnesium! Mind. 6h Abstand zu Zink.",cw:true,light:"#FDEDEC"},
-  {time:"morning",n:"Vitamin B-Komplex",dose:"1 Kapsel laut Produktdosierung",e:"🟡",acc:"#D4AC0D",badge:"Morgens",p:false,when:"Morgens zum Frühstück",why:"B-Vitamine haben eine anregende Wirkung – niemals abends! Fördert Energiestoffwechsel.",compat:"Verträgt sich gut mit Frühstück. Niemals abends nehmen.",cw:false,light:"#FEFAEB"},
-  {time:"morning",n:"Creatin Monohydrat",dose:"5 g täglich (bei 88 kg)",e:"⚡",acc:"#1A6BB5",badge:"Flexibel",p:true,when:"Morgens oder nach dem Training – Konsistenz wichtig",why:"Das am besten belegte Supplement. 5g/Tag, kein Laden nötig. Wirkung nach 2–4 Wochen: +8–14% Kraftleistung.",compat:"Verträgt sich mit allem. Täglich und konsistent!",cw:false,light:"#EBF5FB"},
-  {time:"dinner",n:"Omega 3",dose:"3 g EPA/DHA",e:"🐟",acc:"#E8722A",badge:"Abendessen",p:true,when:"Zur Abendmahlzeit (Fett nötig für Absorption)",why:"EPA/DHA stark anti-inflammatorisch – relevant für dein Knieödem! Verbessert Schlafqualität.",compat:"Gut zusammen mit Vitamin D3/K2.",cw:false,light:"#FEF3EB"},
-  {time:"dinner",n:"Vitamin D3 + K2",dose:"D3: 3000 IU · K2 MK-7: 200 µg",e:"☀️",acc:"#B7950B",badge:"Abendessen",p:false,when:"Zur fettreichen Abendmahlzeit",why:"D3 fettlöslich – braucht Fett zur Aufnahme. K2 lenkt Kalzium in Knochen. In München: fast jeder hat Mangel!",compat:"Synergistisch mit Omega 3. MK-7 Form bevorzugen.",cw:false,light:"#FEF9E7"},
-  {time:"bed",n:"Magnesium Glycinat",dose:"450 mg",e:"💜",acc:"#7B3FA0",badge:"Vor Schlaf",p:true,when:"30 Min vor dem Schlafen",why:"Glycinat-Form: beste Bioverfügbarkeit. Aktiviert GABA → tieferer Slow-Wave-Sleep, weniger Krämpfe.",compat:"Verträgt sich gut mit Zink & NAC. Niemals zusammen mit Eisen!",cw:false,light:"#F5EBF9"},
-  {time:"bed",n:"Zink",dose:"25 mg (Bisglycinat oder Gluconat)",e:"🔵",acc:"#17A589",badge:"Vor Schlaf",p:false,when:"30 Min vor dem Schlafen",why:"Unterstützt Testosteron, Immunsystem, Schlafqualität. Abends um Wechselwirkung mit Eisen zu vermeiden.",compat:"NIEMALS zusammen mit Eisen! Mind. 6h Abstand. Verträgt sich mit Mg & NAC.",cw:true,light:"#E8F8F5"},
-  {time:"bed",n:"NAC (N-Acetylcystein)",dose:"600 mg",e:"🌿",acc:"#27AE60",badge:"Vor Schlaf",p:true,when:"30 Min vor dem Schlafen",why:"Vorläufer von Glutathion. Anti-inflammatorisch → direkt relevant für Knieödem.",compat:"Verträgt sich sehr gut mit Magnesium & Zink.",cw:false,light:"#EAFAF1"},
-  {time:"note",n:"Protein",dose:"Ziel: 158–193 g täglich (1,8–2,2 g/kg)",e:"💪",acc:"#7F8C8D",badge:"Flexibel",p:false,when:"Über den Tag verteilt – letzte Portion abends als Quark (Casein)",why:"Protein ist die wichtigste Variable für Regeneration. Quark abends = langsame Freisetzung über 6–8h.",compat:"Verträgt sich mit allem.",cw:false,light:"#F2F3F4"},
+  {time:"morning",n:"Eisen + Vitamin C",dose:"18–25 mg · 200 mg Vit C",e:"🔴",acc:"#C0392B",badge:"Morgens",p:false,when:"Morgens nüchtern, 30 Min vor Frühstück",why:"Vitamin C steigert Eisen-Absorption um bis zu 300%.",compat:"NIEMALS zusammen mit Zink, Kalzium oder Magnesium! Mind. 6h Abstand zu Zink.",cw:true,light:"#FDEDEC"},
+  {time:"morning",n:"Vitamin B-Komplex",dose:"1 Kapsel",e:"🟡",acc:"#D4AC0D",badge:"Morgens",p:false,when:"Morgens zum Frühstück",why:"B-Vitamine haben eine anregende Wirkung – niemals abends!",compat:"Verträgt sich gut mit Frühstück.",cw:false,light:"#FEFAEB"},
+  {time:"morning",n:"Creatin Monohydrat",dose:"5 g täglich",e:"⚡",acc:"#1A6BB5",badge:"Flexibel",p:true,when:"Morgens oder nach Training",why:"Das am besten belegte Supplement. 5g/Tag, kein Laden nötig.",compat:"Verträgt sich mit allem.",cw:false,light:"#EBF5FB"},
+  {time:"dinner",n:"Omega 3",dose:"3 g EPA/DHA",e:"🐟",acc:"#E8722A",badge:"Abendessen",p:true,when:"Zur Abendmahlzeit (Fett nötig)",why:"Stark anti-inflammatorisch – relevant für Knieödem!",compat:"Gut zusammen mit Vitamin D3/K2.",cw:false,light:"#FEF3EB"},
+  {time:"dinner",n:"Vitamin D3 + K2",dose:"D3: 3000 IU · K2 MK-7: 200 µg",e:"☀️",acc:"#B7950B",badge:"Abendessen",p:false,when:"Zur fettreichen Abendmahlzeit",why:"D3 fettlöslich – braucht Fett. In München: fast jeder hat Mangel!",compat:"Synergistisch mit Omega 3.",cw:false,light:"#FEF9E7"},
+  {time:"bed",n:"Magnesium Glycinat",dose:"450 mg",e:"💜",acc:"#7B3FA0",badge:"Vor Schlaf",p:true,when:"30 Min vor dem Schlafen",why:"Aktiviert GABA → tieferer Slow-Wave-Sleep.",compat:"Verträgt sich mit Zink & NAC. Niemals mit Eisen!",cw:false,light:"#F5EBF9"},
+  {time:"bed",n:"Zink",dose:"25 mg",e:"🔵",acc:"#17A589",badge:"Vor Schlaf",p:false,when:"30 Min vor dem Schlafen",why:"Testosteron, Immunsystem, Schlafqualität.",compat:"NIEMALS mit Eisen! Mind. 6h Abstand.",cw:true,light:"#E8F8F5"},
+  {time:"bed",n:"NAC",dose:"600 mg",e:"🌿",acc:"#27AE60",badge:"Vor Schlaf",p:true,when:"30 Min vor dem Schlafen",why:"Anti-inflammatorisch → Knieödem.",compat:"Verträgt sich sehr gut mit Mg & Zink.",cw:false,light:"#EAFAF1"},
+  {time:"note",n:"Protein",dose:"158–193 g täglich",e:"💪",acc:"#7F8C8D",badge:"Flexibel",p:false,when:"Über den Tag – abends Quark (Casein)",why:"Quark abends = langsame Freisetzung über 6–8h.",compat:"Verträgt sich mit allem.",cw:false,light:"#F2F3F4"},
 ];
 
+/* ── Sub-components ── */
 function DarkToggle({dark, onToggle}) {
   const [anim, setAnim] = useState(false);
-  const handle = () => { setAnim(true); onToggle(); setTimeout(()=>setAnim(false), 500); };
   return (
-    <button onClick={handle} title={dark?"Light Mode":"Dark Mode"}
-      style={{ position:"relative", width:58, height:30, borderRadius:99, border:"none", cursor:"pointer",
-        background: dark ? "#4A6FA0" : "#D8D5CC", transition:"background 0.4s", flexShrink:0,
-        boxShadow: dark?"0 0 12px #4A6FA044":"none" }}>
-      <span style={{ position:"absolute", left:dark?"8px":"auto", right:dark?"auto":"8px",
-        top:"50%", transform:"translateY(-50%)", fontSize:11, opacity:0.7, pointerEvents:"none" }}>
-        {dark ? "✦" : "☀"}
+    <button onClick={()=>{setAnim(true);onToggle();setTimeout(()=>setAnim(false),500);}}
+      style={{position:"relative",width:54,height:28,borderRadius:99,border:"none",cursor:"pointer",
+        background:dark?"#4A6FA0":"#D8D5CC",transition:"background 0.4s",flexShrink:0}}>
+      <span style={{position:"absolute",left:dark?"7px":"auto",right:dark?"auto":"7px",
+        top:"50%",transform:"translateY(-50%)",fontSize:10,opacity:0.6,pointerEvents:"none"}}>
+        {dark?"✦":"☀"}
       </span>
-      <div style={{ position:"absolute", top:4, left:dark?30:4, width:22, height:22, borderRadius:"50%",
-        background:dark?"#E8E6DE":"#fff", boxShadow:"0 1px 5px rgba(0,0,0,0.3)",
-        transition:"left 0.35s cubic-bezier(0.34,1.56,0.64,1), background 0.4s",
-        display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>
-        <span className={anim ? (dark?"icon-spin":"icon-spinr") : ""}>{dark?"🌙":"☀️"}</span>
+      <div style={{position:"absolute",top:3,left:dark?28:3,width:22,height:22,borderRadius:"50%",
+        background:dark?"#E8E6DE":"#fff",boxShadow:"0 1px 5px rgba(0,0,0,0.3)",
+        transition:"left 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+        display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>
+        <span className={anim?(dark?"icon-spin":"icon-spinr"):""}>{dark?"🌙":"☀️"}</span>
       </div>
     </button>
   );
 }
 
-// Schicker Toggle-Switch
-function SliderToggle({on, onChange, colorOn="#0097A7", T}) {
+function Toggle({on, onChange, colorOn="#0097A7", T}) {
   return (
     <button onClick={()=>onChange(!on)}
-      style={{ position:"relative", width:44, height:24, borderRadius:99, border:"none", cursor:"pointer",
-        background: on ? colorOn : (T.toggleOffBg || "#ccc"),
-        transition:"background 0.3s", flexShrink:0 }}>
-      <div style={{ position:"absolute", top:3, left: on ? 23 : 3, width:18, height:18, borderRadius:"50%",
-        background:"#fff", boxShadow:"0 1px 4px rgba(0,0,0,0.25)",
-        transition:"left 0.3s cubic-bezier(0.34,1.56,0.64,1)" }}/>
+      style={{position:"relative",width:44,height:24,borderRadius:99,border:"none",cursor:"pointer",
+        background:on?colorOn:(T.toggleOff||"#ccc"),transition:"background 0.3s",flexShrink:0}}>
+      <div style={{position:"absolute",top:3,left:on?23:3,width:18,height:18,borderRadius:"50%",
+        background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.25)",
+        transition:"left 0.3s cubic-bezier(0.34,1.56,0.64,1)"}}/>
     </button>
   );
 }
 
+/* Unified time input field */
+function TimeField({label, value, onChange, color="#3D5A80", T, extra}) {
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:3}}>
+      <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.07em",textTransform:"uppercase",color:T.sub}}>{label}</div>
+      <div style={{display:"flex",alignItems:"center",gap:6,background:T.timeBg,border:`1.5px solid ${T.timeB}`,
+        borderRadius:10,padding:"6px 12px",transition:"border-color 0.15s"}}>
+        <input type="time" value={value} onChange={e=>onChange(e.target.value)}
+          style={{color,fontSize:20,fontFamily:"'DM Mono',monospace",fontWeight:600,
+            border:"none",outline:"none",background:"transparent",cursor:"pointer"}}/>
+        {extra}
+      </div>
+    </div>
+  );
+}
+
+/* Slider field */
+function SliderField({label, value, min, max, step=5, onChange, color, T, display, subleft, subright}) {
+  const pct = ((value-min)/(max-min))*100;
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:4,flex:1,minWidth:130}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.07em",textTransform:"uppercase",color:T.sub}}>{label}</div>
+        <div style={{fontSize:13,fontWeight:700,color,fontFamily:"'DM Mono',monospace"}}>{display}</div>
+      </div>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={e=>onChange(Number(e.target.value))}
+        style={{accentColor:color,
+          background:`linear-gradient(to right,${color} 0%,${color} ${pct}%,${T.prog} ${pct}%,${T.prog} 100%)`}}/>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:T.muted}}>
+        <span>{subleft}</span><span>{subright}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── APP ── */
 function App() {
   const [manualDark, setManualDark] = useState(null);
   const [autoTime,   setAutoTime]   = useState(isAutoTime());
   const dark = manualDark !== null ? manualDark : autoTime;
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      const next = isAutoTime();
-      setAutoTime(prev => { if (prev !== next) setManualDark(null); return next; });
-    }, 30000);
-    return () => clearInterval(id);
-  }, []);
-
-  const [mode,          setMode]          = useState("bed");
-  const [bedTime,       setBedTime]       = useState("22:30");
-  const [wakeTime,      setWakeTime]      = useState("08:00");
-  const [sleepGoalH,    setSleepGoalH]    = useState(9);
-  const [sleepGoalM,    setSleepGoalM]    = useState(0);
-  const [routineStart,  setRoutineStart]  = useState(-120); // mins before bed, slider -180..-30
-  const [routineDur,    setRoutineDur]    = useState(90);   // total duration in mins, slider 30..180
-  const [showerOn,      setShowerOn]      = useState(true);
-  const [tab,           setTab]           = useState("timeline");
-  const [expanded,      setExpanded]      = useState({});
-  const [done,          setDone]          = useState({});
-  const [suppFilter,    setSuppFilter]    = useState("all");
-
   const T = dark ? D : L;
 
-  const sleepGoalMins = sleepGoalH*60+sleepGoalM;
-  const bedMins  = mode==="bed"  ? timeToMins(bedTime)  : ((timeToMins(wakeTime)-sleepGoalMins+1440)%1440);
-  const wakeMins = mode==="wake" ? timeToMins(wakeTime) : ((timeToMins(bedTime) +sleepGoalMins)%1440);
-  const displayBed  = minsToTime(bedMins);
-  const displayWake = minsToTime(wakeMins);
-  const sleepDur = ((wakeMins-bedMins+1440)%1440);
-  const sleepH   = Math.floor(sleepDur/60);
-  const sleepM_  = sleepDur%60;
-  const sleepColor = sleepH>=8?"#1A9862":sleepH>=7?"#D4A017":"#C0392B";
-  const sleepLabel = sleepH>=8?"optimal":sleepH>=7?"gut":"zu kurz";
+  useEffect(()=>{
+    const id = setInterval(()=>{
+      const next = isAutoTime();
+      setAutoTime(prev=>{ if(prev!==next) setManualDark(null); return next; });
+    }, 30000);
+    return ()=>clearInterval(id);
+  },[]);
 
-  // Build visible blocks: filter shower if off, scale offsets to routineStart/routineDur
-  const BLOCKS = BASE_BLOCKS.filter(b => b.id !== "shower" || showerOn);
+  // ── time state
+  const [anchor,       setAnchor]       = useState("bed");    // "bed" | "wake"
+  const [bedTime,      setBedTime]      = useState("22:30");  // Schlafenszeit
+  const [wakeTime,     setWakeTime]     = useState("07:30");  // Aufwachzeit
+  const [sleepDurH,    setSleepDurH]    = useState(9);        // Bettzeit Stunden
+  const [sleepDurM,    setSleepDurM]    = useState(0);        // Bettzeit Minuten
+  const [routineStart, setRoutineStart] = useState(-90);      // mins before bedTime
+  const [showerOn,     setShowerOn]     = useState(true);
 
-  // Routine start time display
-  const routineStartTime = minsToTime(bedMins + routineStart);
-  const routineEndTime   = minsToTime(bedMins + routineStart + routineDur);
+  // derive: if anchor=bed, wakeTime is derived; if anchor=wake, bedTime is derived
+  const sleepDurMins = sleepDurH*60 + sleepDurM;
+  const bedMins  = anchor==="bed"  ? timeToMins(bedTime)  : ((timeToMins(wakeTime) - sleepDurMins + 1440) % 1440);
+  const wakeMins = anchor==="wake" ? timeToMins(wakeTime) : ((timeToMins(bedTime)  + sleepDurMins) % 1440);
+  const derivedBed  = minsToTime(bedMins);
+  const derivedWake = minsToTime(wakeMins);
 
-  // blockTime scales the block offsets linearly within [routineStart, 0]
-  // Original range is roughly -120 to 0. We scale to [routineStart, 0].
-  const origSpan = 120; // original routine span in mins
-  const blockTime = (offset) => {
-    if (offset === 0) return minsToTime(bedMins);
-    const scaled = Math.round((offset / (-origSpan)) * routineDur);
-    return minsToTime(bedMins - scaled);
+  // Routine timing
+  const routineStartMins = bedMins + routineStart; // abs mins
+  const routineSpanMins  = -routineStart;           // how long routine lasts
+  const routineStartStr  = minsToTime(routineStartMins);
+
+  // Block time: scale baseOff (0=-1..0) across routineSpanMins
+  const blockTime = (baseOff) => {
+    if (baseOff === 0) return derivedBed;
+    const mins = bedMins + Math.round(baseOff * routineSpanMins);
+    return minsToTime(mins);
   };
 
-  const toggle     = (id) => setExpanded(p=>({...p,[id]:!p[id]}));
-  const toggleDone = (id) => setDone(p=>({...p,[id]:!p[id]}));
-  const filteredSupps = SUPPS.filter(s=>suppFilter==="all"||s.time===suppFilter);
+  const [tab,       setTab]       = useState("timeline");
+  const [expanded,  setExpanded]  = useState({});
+  const [done,      setDone]      = useState({});
+  const [suppFilter,setSuppFilter]= useState("all");
+
+  const toggle     = id => setExpanded(p=>({...p,[id]:!p[id]}));
+  const toggleDone = id => setDone(p=>({...p,[id]:!p[id]}));
+
+  const BLOCKS = BASE_BLOCKS.filter(b => b.id !== "shower" || showerOn);
   const doneCount = BLOCKS.filter(b=>done[b.id]).length;
+  const filteredSupps = SUPPS.filter(s=>suppFilter==="all"||s.time===suppFilter);
 
-  const inp = (color) => ({fontSize:19,fontWeight:700,color,background:"transparent",border:"none",outline:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:78});
+  const sleepH_ = Math.floor(sleepDurMins/60), sleepM_ = sleepDurMins%60;
+  const sleepColor = sleepH_>=8?"#1A9862":sleepH_>=7?"#D4A017":"#C0392B";
+  const sleepLabel = sleepH_>=8?"optimal":sleepH_>=7?"gut":"zu kurz";
 
-  const sliderStyle = (val, min, max, color) => ({
-    width:"100%", accentColor: color,
-    background:`linear-gradient(to right, ${color} 0%, ${color} ${((val-min)/(max-min))*100}%, ${dark?"#3A3A35":"#E5E2DA"} ${((val-min)/(max-min))*100}%, ${dark?"#3A3A35":"#E5E2DA"} 100%)`,
-  });
+  const setNow = () => setRoutineStart(timeToMins(nowTime()) - bedMins <= 0
+    ? timeToMins(nowTime()) - bedMins
+    : timeToMins(nowTime()) - bedMins - 1440);
 
   return (
     <div style={{fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:T.bg,color:T.text,transition:"background 0.4s,color 0.3s"}}>
 
-      {/* HEADER */}
-      <div style={{background:T.hdrBg,borderBottom:`1px solid ${T.hdrBorder}`,position:"sticky",top:0,zIndex:100,
-        boxShadow:dark?"0 2px 24px rgba(0,0,0,0.6)":"0 2px 12px rgba(0,0,0,0.07)",transition:"background 0.4s,border 0.3s"}}>
+      {/* ── HEADER ── */}
+      <div style={{background:T.hdr,borderBottom:`1px solid ${T.hdrB}`,position:"sticky",top:0,zIndex:100,
+        boxShadow:dark?"0 2px 24px rgba(0,0,0,0.55)":"0 2px 12px rgba(0,0,0,0.07)",transition:"background 0.4s,border 0.3s"}}>
         <div style={{maxWidth:860,margin:"0 auto",padding:"14px 16px 0"}}>
 
-          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:14}}>
-            {/* Title */}
+          {/* title row */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
             <div>
-              <h1 style={{fontFamily:"'DM Serif Display',serif",fontSize:22,color:T.text,transition:"color 0.3s"}}>
-                {dark?"🌑":"🌙"} Abendroutine
-              </h1>
+              <h1 style={{fontFamily:"'DM Serif Display',serif",fontSize:22,color:T.text}}>{dark?"🌑":"🌙"} Abendroutine</h1>
               <p style={{fontSize:12,color:T.sub,marginTop:2}}>Wissenschaftlich fundiert · 88 kg · 24 J · Kniefokus</p>
             </div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:11,color:T.sub,fontWeight:600,letterSpacing:"0.04em"}}>{dark?"DARK":"LIGHT"}</div>
+                <div style={{fontSize:9,color:T.muted}}>{manualDark===null?"auto":"manuell"}</div>
+              </div>
+              <DarkToggle dark={dark} onToggle={()=>setManualDark(!dark)}/>
+            </div>
+          </div>
 
-            <div style={{display:"flex",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
-              {/* Dark toggle */}
-              <div style={{display:"flex",alignItems:"center",gap:8,paddingTop:2}}>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:11,color:T.sub,fontWeight:600,letterSpacing:"0.04em"}}>{dark?"DARK":"LIGHT"}</div>
-                  <div style={{fontSize:9,color:T.muted,marginTop:1}}>{manualDark===null?"auto":"manuell"}</div>
+          {/* ── TIME CONTROLS ── */}
+          <div style={{background:T.ctrl,border:`1px solid ${T.ctrlB}`,borderRadius:14,padding:"16px 18px",marginBottom:14,transition:"background 0.4s,border 0.3s"}}>
+
+            {/* Row 1: Anchor + Schlafenszeit + Aufwachzeit + Bettzeit */}
+            <div style={{display:"flex",alignItems:"flex-end",gap:14,flexWrap:"wrap"}}>
+
+              {/* Anchor toggle */}
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.07em",textTransform:"uppercase",color:T.sub}}>Festlegen</div>
+                <div style={{display:"flex",borderRadius:9,overflow:"hidden",border:`1.5px solid ${T.ctrlB}`}}>
+                  <button onClick={()=>setAnchor("bed")}
+                    style={{padding:"7px 13px",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",
+                      background:anchor==="bed"?T.bedAct:"transparent",
+                      color:anchor==="bed"?"#fff":T.sub,transition:"background 0.2s",whiteSpace:"nowrap"}}>
+                    🌙 Schlafenszeit
+                  </button>
+                  <button onClick={()=>setAnchor("wake")}
+                    style={{padding:"7px 13px",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",
+                      background:anchor==="wake"?T.wakeAct:"transparent",
+                      color:anchor==="wake"?"#fff":T.sub,transition:"background 0.2s",whiteSpace:"nowrap"}}>
+                    ☀️ Aufwachzeit
+                  </button>
                 </div>
-                <DarkToggle dark={dark} onToggle={()=>setManualDark(!dark)} />
               </div>
 
-              {/* Main controls box */}
-              <div style={{background:T.ctrlBg,borderRadius:12,padding:"10px 14px",border:`1px solid ${T.ctrlBorder}`,display:"flex",flexDirection:"column",gap:10,transition:"background 0.4s,border 0.3s"}}>
+              <div style={{width:1,background:T.sep,height:48,alignSelf:"center"}}/>
 
-                {/* Row 1: Zeit-Modus + Bettzeit + Aufwachen + Schlafdauer */}
-                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                  {/* Modus */}
-                  <div>
-                    <div style={{fontSize:10,color:T.sub,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:3}}>Modus</div>
-                    <div style={{display:"flex",borderRadius:7,overflow:"hidden",border:`1px solid ${T.ctrlBorder}`}}>
-                      <button onClick={()=>setMode("bed")}  style={{padding:"4px 10px",fontSize:11,fontWeight:700,border:"none",cursor:"pointer",background:mode==="bed"?T.modeActBed:"transparent",color:mode==="bed"?"#fff":T.sub,transition:"background 0.2s"}}>🌙 Bettzeit</button>
-                      <button onClick={()=>setMode("wake")} style={{padding:"4px 10px",fontSize:11,fontWeight:700,border:"none",cursor:"pointer",background:mode==="wake"?T.modeActWake:"transparent",color:mode==="wake"?"#fff":T.sub,transition:"background 0.2s"}}>☀️ Aufwachen</button>
-                    </div>
+              {/* Schlafenszeit */}
+              {anchor==="bed"
+                ? <TimeField label="Schlafenszeit" value={bedTime} onChange={setBedTime} color="#4A8FD0" T={T}/>
+                : <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                    <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.07em",textTransform:"uppercase",color:T.muted}}>Schlafenszeit</div>
+                    <div style={{fontSize:20,fontWeight:600,fontFamily:"'DM Mono',monospace",color:T.muted,padding:"6px 0"}}>{derivedBed}</div>
                   </div>
-                  <div style={{width:1,background:T.sep,alignSelf:"stretch"}}/>
-                  {/* Bettzeit */}
-                  <div style={{textAlign:"center"}}>
-                    <div style={{fontSize:10,color:mode==="bed"?"#4A8FD0":T.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Bettgehzeit</div>
-                    {mode==="bed"
-                      ? <input type="time" value={bedTime} onChange={e=>setBedTime(e.target.value)} style={inp("#4A8FD0")}/>
-                      : <div style={{fontSize:19,fontWeight:700,color:T.muted}}>{displayBed}</div>}
+              }
+
+              <div style={{display:"flex",alignItems:"center",alignSelf:"flex-end",paddingBottom:8,color:T.muted,fontSize:14}}>→</div>
+
+              {/* Aufwachzeit */}
+              {anchor==="wake"
+                ? <TimeField label="Aufwachzeit" value={wakeTime} onChange={setWakeTime} color="#1A9862" T={T}/>
+                : <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                    <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.07em",textTransform:"uppercase",color:T.muted}}>Aufwachzeit</div>
+                    <div style={{fontSize:20,fontWeight:600,fontFamily:"'DM Mono',monospace",color:"#1A9862",padding:"6px 0"}}>{derivedWake}</div>
                   </div>
-                  <div style={{color:T.muted,fontSize:16}}>→</div>
-                  {/* Aufwachen */}
-                  <div style={{textAlign:"center"}}>
-                    <div style={{fontSize:10,color:mode==="wake"?"#1A9862":T.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Aufwachen</div>
-                    {mode==="wake"
-                      ? <input type="time" value={wakeTime} onChange={e=>setWakeTime(e.target.value)} style={inp("#1A9862")}/>
-                      : <div style={{fontSize:19,fontWeight:700,color:"#1A9862"}}>{displayWake}</div>}
-                  </div>
-                  <div style={{width:1,background:T.sep,alignSelf:"stretch"}}/>
-                  {/* Schlafdauer */}
-                  <div style={{textAlign:"center"}}>
-                    <div style={{fontSize:10,color:T.sub,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Schlafdauer</div>
-                    <div style={{display:"flex",alignItems:"center",gap:3,marginTop:3}}>
-                      <input type="number" min={4} max={12} value={sleepGoalH} onChange={e=>setSleepGoalH(Number(e.target.value))}
-                        style={{width:32,fontSize:18,fontWeight:700,color:sleepColor,border:"none",background:"transparent",outline:"none",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}/>
-                      <span style={{fontSize:11,color:T.sub}}>h</span>
-                      <input type="number" min={0} max={59} step={15} value={sleepGoalM} onChange={e=>setSleepGoalM(Number(e.target.value))}
-                        style={{width:28,fontSize:18,fontWeight:700,color:sleepColor,border:"none",background:"transparent",outline:"none",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}/>
-                      <span style={{fontSize:11,color:T.sub}}>m</span>
-                    </div>
-                    <div style={{fontSize:10,color:sleepColor,fontWeight:700}}>{sleepLabel}</div>
-                  </div>
+              }
+
+              <div style={{width:1,background:T.sep,height:48,alignSelf:"center"}}/>
+
+              {/* Bettzeit (Dauer) */}
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.07em",textTransform:"uppercase",color:T.sub}}>Bettzeit</div>
+                <div style={{display:"flex",alignItems:"center",gap:4,background:T.timeBg,border:`1.5px solid ${T.timeB}`,borderRadius:10,padding:"6px 12px"}}>
+                  <input type="number" min={4} max={12} value={sleepDurH} onChange={e=>setSleepDurH(Number(e.target.value))}
+                    style={{width:28,fontSize:20,color:sleepColor,fontFamily:"'DM Mono',monospace",fontWeight:600,
+                      border:"none",outline:"none",background:"transparent",cursor:"pointer",textAlign:"center"}}/>
+                  <span style={{fontSize:12,color:T.sub,fontWeight:500}}>h</span>
+                  <input type="number" min={0} max={59} step={15} value={sleepDurM} onChange={e=>setSleepDurM(Number(e.target.value))}
+                    style={{width:24,fontSize:20,color:sleepColor,fontFamily:"'DM Mono',monospace",fontWeight:600,
+                      border:"none",outline:"none",background:"transparent",cursor:"pointer",textAlign:"center"}}/>
+                  <span style={{fontSize:12,color:T.sub,fontWeight:500}}>m</span>
                 </div>
+                <div style={{fontSize:10,fontWeight:700,color:sleepColor,textAlign:"center"}}>{sleepLabel}</div>
+              </div>
+            </div>
 
-                {/* Divider */}
-                <div style={{height:1,background:T.sep}}/>
+            {/* Divider */}
+            <div style={{height:1,background:T.sep,margin:"14px 0"}}/>
 
-                {/* Row 2: Abendroutine Start + Dauer + Dusche Toggle */}
-                <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
-
-                  {/* Start Abendroutine */}
-                  <div style={{minWidth:160,flex:1}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                      <div style={{fontSize:10,color:T.sub,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Start Abendroutine</div>
-                      <div style={{fontSize:12,fontWeight:700,color:"#3D5A80",fontFamily:"monospace"}}>{routineStartTime}</div>
-                    </div>
-                    <input type="range" min={-180} max={-30} step={5} value={routineStart}
-                      onChange={e=>setRoutineStart(Number(e.target.value))}
-                      style={{...sliderStyle(routineStart,-180,-30,"#3D5A80"),width:"100%",height:4,borderRadius:99,outline:"none",cursor:"pointer",border:"none"}}
-                    />
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:T.muted,marginTop:2}}>
-                      <span>3h vorher</span><span>30 Min</span>
-                    </div>
-                  </div>
-
-                  <div style={{width:1,background:T.sep,alignSelf:"stretch"}}/>
-
-                  {/* Dauer Abendroutine */}
-                  <div style={{minWidth:140,flex:1}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                      <div style={{fontSize:10,color:T.sub,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Dauer</div>
-                      <div style={{fontSize:12,fontWeight:700,color:"#1A9862",fontFamily:"monospace"}}>{routineDur} Min</div>
-                    </div>
-                    <input type="range" min={30} max={180} step={5} value={routineDur}
-                      onChange={e=>setRoutineDur(Number(e.target.value))}
-                      style={{...sliderStyle(routineDur,30,180,"#1A9862"),width:"100%",height:4,borderRadius:99,outline:"none",cursor:"pointer",border:"none"}}
-                    />
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:T.muted,marginTop:2}}>
-                      <span>30 Min</span><span>3h</span>
-                    </div>
-                  </div>
-
-                  <div style={{width:1,background:T.sep,alignSelf:"stretch"}}/>
-
-                  {/* Dusche Toggle */}
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                    <div>
-                      <div style={{fontSize:10,color:T.sub,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Dusche</div>
-                      <div style={{fontSize:11,color:showerOn?"#0097A7":T.muted,marginTop:1,fontWeight:600}}>
-                        {showerOn?"🚿 Ein":"—— Aus"}
-                      </div>
-                    </div>
-                    <SliderToggle on={showerOn} onChange={setShowerOn} colorOn="#0097A7" T={T}/>
-                  </div>
-
-                </div>
+            {/* Row 2: Start Routine */}
+            <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+              <div style={{flex:1,minWidth:200}}>
+                <SliderField
+                  label="Start Abendroutine"
+                  value={routineStart} min={-180} max={-20} step={5}
+                  onChange={setRoutineStart}
+                  color="#3D5A80" T={T}
+                  display={routineStartStr}
+                  subleft="3h vorher" subright="20 Min"
+                />
+              </div>
+              <button onClick={setNow}
+                style={{flexShrink:0,padding:"7px 14px",borderRadius:9,border:`1.5px solid ${T.nowBtn}`,
+                  background:"transparent",color:T.nowBtn,fontFamily:"'DM Sans',sans-serif",
+                  fontSize:12,fontWeight:600,cursor:"pointer",transition:"all 0.15s",
+                  display:"flex",alignItems:"center",gap:5}}
+                onMouseOver={e=>{e.currentTarget.style.background=T.nowBtn;e.currentTarget.style.color="#fff";}}
+                onMouseOut={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=T.nowBtn;}}>
+                ⏱ Jetzt
+              </button>
+              <div style={{fontSize:12,color:T.sub}}>
+                Routine: <strong style={{color:"#3D5A80",fontFamily:"'DM Mono',monospace"}}>{routineStartStr}</strong>
+                {" – "}
+                <strong style={{color:"#4A8FD0",fontFamily:"'DM Mono',monospace"}}>{derivedBed}</strong>
+                {" · "}
+                <span style={{color:T.sub}}>{fmtDur(routineSpanMins)}</span>
+                {!showerOn && <span style={{marginLeft:6,fontSize:11,color:T.muted,background:T.prog,padding:"1px 7px",borderRadius:99}}>ohne Dusche</span>}
               </div>
             </div>
           </div>
@@ -377,14 +442,14 @@ function App() {
               <button key={id} onClick={()=>setTab(id)}
                 style={{padding:"8px 16px",fontSize:13,fontWeight:600,border:"none",cursor:"pointer",
                   borderRadius:"8px 8px 0 0",
-                  background:tab===id?T.tabActive:"transparent",
+                  background:tab===id?T.tabAct:"transparent",
                   color:tab===id?"#fff":T.sub,transition:"background 0.2s,color 0.2s"}}>{label}</button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* BODY */}
+      {/* ── BODY ── */}
       <div style={{maxWidth:860,margin:"0 auto",padding:"20px 16px 60px"}}>
 
         {/* TIMELINE */}
@@ -392,35 +457,35 @@ function App() {
           <div className="tab-anim">
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
               <div style={{fontSize:13,color:T.sub}}>
-                Routine <strong style={{color:"#3D5A80"}}>{routineStartTime}</strong> – <strong style={{color:"#1A9862"}}>{routineEndTime}</strong> · {routineDur} Min
-                {!showerOn && <span style={{marginLeft:8,fontSize:11,color:T.muted,background:T.progBg,padding:"2px 8px",borderRadius:99}}>ohne Dusche</span>}
+                {doneCount}/{BLOCKS.length} erledigt
               </div>
-              <div style={{fontSize:12,color:"#1A9862",fontWeight:600}}>{doneCount}/{BLOCKS.length} erledigt</div>
             </div>
-            <div style={{background:T.progBg,borderRadius:99,height:4,marginBottom:18,overflow:"hidden"}}>
+            <div style={{background:T.prog,borderRadius:99,height:4,marginBottom:18,overflow:"hidden"}}>
               <div style={{height:"100%",borderRadius:99,background:"#1A9862",width:`${(doneCount/BLOCKS.length)*100}%`,transition:"width 0.4s"}}/>
             </div>
 
-            {sleepH<8 && (
-              <div style={{background:T.tipBg,border:`1px solid ${T.tipBorder}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T.tipText,marginBottom:14}}>
-                ⚡ <strong>Tipp:</strong> Mit {sleepH}h {sleepM_}m Schlaf liegst du unter dem Optimum. Früher ins Bett!
+            {sleepH_<8 && (
+              <div style={{background:T.tipBg,border:`1px solid ${T.tipB}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T.tipC,marginBottom:14}}>
+                ⚡ <strong>Tipp:</strong> Mit {sleepH_}h {sleepM_}m Schlaf liegst du unter dem Optimum. Früher ins Bett!
               </div>
             )}
 
             {BLOCKS.map((b)=>{
-              const t=blockTime(b.offset), isOpen=expanded[b.id], isDone=done[b.id];
+              const t=blockTime(b.baseOff), isOpen=expanded[b.id], isDone=done[b.id];
               return (
                 <div key={b.id} style={{
-                  background:T.cardBg(b.light,isDone),
-                  border:`2px solid ${T.cardBorder(b.accent,isDone,b.highlight)}`,
-                  borderRadius:14,marginBottom:10,overflow:"hidden",
-                  opacity:isDone?0.6:1,
+                  background:T.card(b.light,isDone),
+                  border:`2px solid ${T.cardB(b.accent,isDone,b.highlight)}`,
+                  borderRadius:14,marginBottom:10,overflow:"hidden",opacity:isDone?0.55:1,
                   boxShadow:b.highlight?`0 2px 14px ${b.accent}${dark?"44":"22"}`:"none",
-                  transition:"background 0.4s,border 0.3s"}}>
+                  transition:"background 0.4s,border 0.3s,opacity 0.2s"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer"}} onClick={()=>toggle(b.id)}>
-                    <button style={{width:26,height:26,borderRadius:"50%",border:`2px solid ${isDone?b.accent:T.muted}`,background:isDone?b.accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,cursor:"pointer",flexShrink:0}}
+                    <button style={{width:26,height:26,borderRadius:"50%",border:`2px solid ${isDone?b.accent:T.muted}`,
+                      background:isDone?b.accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center",
+                      color:"#fff",fontSize:12,cursor:"pointer",flexShrink:0,transition:"all 0.15s"}}
                       onClick={e=>{e.stopPropagation();toggleDone(b.id);}}>{isDone&&"✓"}</button>
-                    <div style={{background:b.accent+"22",color:b.accent,fontSize:12,fontWeight:700,padding:"3px 9px",borderRadius:99,flexShrink:0,fontFamily:"monospace"}}>{t}</div>
+                    <div style={{background:b.accent+"22",color:b.accent,fontSize:12,fontWeight:700,
+                      padding:"3px 9px",borderRadius:99,flexShrink:0,fontFamily:"monospace"}}>{t}</div>
                     <div style={{fontSize:18,flexShrink:0}}>{b.emoji}</div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6}}>
@@ -429,6 +494,13 @@ function App() {
                       </div>
                       <div style={{fontSize:12,color:T.sub,marginTop:1}}>{b.short}</div>
                     </div>
+                    {/* Dusche toggle inline */}
+                    {b.hasToggle && (
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,marginRight:4}} onClick={e=>e.stopPropagation()}>
+                        <span style={{fontSize:11,color:showerOn?"#0097A7":T.muted,fontWeight:600}}>{showerOn?"Ein":"Aus"}</span>
+                        <Toggle on={showerOn} onChange={setShowerOn} colorOn="#0097A7" T={T}/>
+                      </div>
+                    )}
                     {b.dur>0&&<div style={{fontSize:11,color:T.muted,flexShrink:0,marginRight:4}}>{b.dur} Min</div>}
                     <div style={{fontSize:10,color:T.muted}}>{isOpen?"▲":"▼"}</div>
                   </div>
@@ -442,8 +514,9 @@ function App() {
               );
             })}
 
-            <div style={{background:T.wkBg,border:`2px solid ${T.wkBorder}`,borderRadius:14,padding:14,marginTop:14,transition:"background 0.4s"}}>
-              <div style={{fontFamily:"'DM Serif Display',serif",fontSize:16,color:T.wkTitle}}>☀️ {displayWake} – Aufstehen & Morgen-Supplements</div>
+            {/* Wake card */}
+            <div style={{background:T.wkBg,border:`2px solid ${T.wkB}`,borderRadius:14,padding:14,marginTop:14}}>
+              <div style={{fontFamily:"'DM Serif Display',serif",fontSize:16,color:T.wkTitle}}>☀️ {derivedWake} – Aufstehen & Morgen-Supplements</div>
               <div style={{fontSize:13,color:T.wkText,marginTop:8,lineHeight:1.7}}>
                 <strong>Nüchtern (sofort):</strong> Eisen + Vitamin C (30 Min vor Essen warten)<br/>
                 <strong>Zum Frühstück:</strong> Vitamin B-Komplex · Creatin (5g)<br/>
@@ -456,8 +529,8 @@ function App() {
         {/* BEWEGUNG */}
         {tab==="move" && (
           <div className="tab-anim">
-            <div style={{background:T.infoWarnBg,border:`1px solid ${T.infoWarnBorder}`,borderRadius:12,padding:"12px 14px",marginBottom:18,fontSize:13,color:T.infoWarnText,lineHeight:1.6}}>
-              <strong>⚠️ Knieödem-Hinweis:</strong> Kein direktes Foam Rolling auf dem Kniegelenk oder Ödembereich! Bei Schmerzen sofort aufhören.
+            <div style={{background:T.infoWBg,border:`1px solid ${T.infoWB}`,borderRadius:12,padding:"12px 14px",marginBottom:18,fontSize:13,color:T.infoWC,lineHeight:1.6}}>
+              <strong>⚠️ Knieödem-Hinweis:</strong> Kein direktes Foam Rolling auf dem Kniegelenk! Bei Schmerzen sofort aufhören.
             </div>
             {[["foam","🔵 Foam Rolling","~13 Min · langsam und kontrolliert"],
               ["stretch","🟢 Stretching","~15 Min · statisch halten, tief atmen"]].map(([type,title,sub],si)=>(
@@ -467,20 +540,20 @@ function App() {
                 {EX.filter(e=>e.t===type).map((ex,i)=>{
                   const key=type[0]+i;
                   return (
-                    <div key={key} style={{background:T.exBg(ex.w),border:`1px solid ${T.exBorder(ex.w)}`,borderRadius:12,marginBottom:8,overflow:"hidden",transition:"background 0.4s"}}>
+                    <div key={key} style={{background:T.exBg(ex.w),border:`1px solid ${T.exB(ex.w)}`,borderRadius:12,marginBottom:8,overflow:"hidden",transition:"background 0.4s"}}>
                       <div style={{display:"flex",alignItems:"center",gap:10,padding:"11px 13px",cursor:"pointer"}} onClick={()=>toggle(key)}>
                         <div style={{fontSize:18}}>{ex.e}</div>
-                        <div>
+                        <div style={{flex:1}}>
                           <div style={{fontWeight:600,fontSize:14,color:T.text}}>{ex.n}</div>
                           <div style={{fontSize:11,color:T.sub}}>{ex.d} · {ex.s}</div>
                         </div>
-                        {ex.w&&<div style={{marginLeft:"auto",fontSize:10,background:T.warnBg,color:T.warnColor,padding:"2px 8px",borderRadius:99,fontWeight:700,flexShrink:0}}>⚠️ Knie</div>}
-                        <div style={{fontSize:10,color:T.muted,marginLeft:ex.w?6:"auto"}}>{expanded[key]?"▲":"▼"}</div>
+                        {ex.w&&<div style={{fontSize:10,background:T.warnBg,color:T.warnC,padding:"2px 8px",borderRadius:99,fontWeight:700,flexShrink:0}}>⚠️ Knie</div>}
+                        <div style={{fontSize:10,color:T.muted,marginLeft:6}}>{expanded[key]?"▲":"▼"}</div>
                       </div>
                       {expanded[key]&&(
-                        <div style={{padding:"0 13px 11px",borderTop:`1px solid ${T.exBodyBorder}`}}>
+                        <div style={{padding:"0 13px 11px",borderTop:`1px solid ${T.exBodyB}`}}>
                           <p style={{fontSize:13,color:T.text,lineHeight:1.7,marginTop:8,opacity:dark?0.8:0.9}}>{ex.i}</p>
-                          {ex.warn&&<div style={{marginTop:8,background:T.warnBg,borderRadius:8,padding:"7px 11px",fontSize:12,color:T.warnColor}}>{ex.warn}</div>}
+                          {ex.warn&&<div style={{marginTop:8,background:T.warnBg,borderRadius:8,padding:"7px 11px",fontSize:12,color:T.warnC}}>{ex.warn}</div>}
                         </div>
                       )}
                     </div>
@@ -488,7 +561,7 @@ function App() {
                 })}
               </div>
             ))}
-            <div style={{background:T.shortBg,border:`1px solid ${T.shortBorder}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T.shortText,marginTop:14}}>
+            <div style={{background:T.shortBg,border:`1px solid ${T.shortB}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T.shortC,marginTop:14}}>
               <strong>⚡ Routine kürzen auf 20 Min?</strong><br/>
               Quadrizeps FR → IT-Band FR → Wadenstretch → Hüftbeuger → Taubenpose → Kindpose.
             </div>
@@ -498,16 +571,16 @@ function App() {
         {/* SUPPLEMENTS */}
         {tab==="supps" && (
           <div className="tab-anim">
-            <div style={{background:T.errBg,border:`1px solid ${T.errBorder}`,borderRadius:12,padding:"12px 14px",marginBottom:14,fontSize:13,color:T.errText,lineHeight:1.6}}>
-              <strong>⚠️ Wichtigste Interaktion:</strong> Eisen (morgens nüchtern) und Zink (abends) <strong>NIEMALS zusammen</strong> – mindestens 6h Abstand!
+            <div style={{background:T.errBg,border:`1px solid ${T.errB}`,borderRadius:12,padding:"12px 14px",marginBottom:14,fontSize:13,color:T.errC,lineHeight:1.6}}>
+              <strong>⚠️ Wichtigste Interaktion:</strong> Eisen (morgens) und Zink (abends) <strong>NIEMALS zusammen</strong> – mindestens 6h Abstand!
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
               {[["all","Alle"],["morning","☀️ Morgens"],["dinner","🍽️ Abendessen"],["bed","🌙 Vor Schlaf"]].map(([id,label])=>(
                 <button key={id} onClick={()=>setSuppFilter(id)}
                   style={{padding:"6px 13px",fontSize:12,fontWeight:600,borderRadius:99,
-                    border:`1px solid ${suppFilter===id?T.filterActiveBg:T.filterBorder}`,
-                    background:suppFilter===id?T.filterActiveBg:"transparent",
-                    color:suppFilter===id?T.filterActiveColor:T.filterColor,cursor:"pointer",transition:"all 0.15s"}}>{label}</button>
+                    border:`1px solid ${suppFilter===id?T.filterAct:"#aaa"}`,
+                    background:suppFilter===id?T.filterAct:"transparent",
+                    color:suppFilter===id?"#fff":T.sub,cursor:"pointer",transition:"all 0.15s"}}>{label}</button>
               ))}
             </div>
             {filteredSupps.map((sp,i)=>{
@@ -525,7 +598,7 @@ function App() {
                       </div>
                       <div style={{fontSize:12,color:T.sub,marginTop:1}}>{sp.dose}</div>
                     </div>
-                    <div style={{marginLeft:"auto",fontSize:11,fontWeight:700,background:sp.acc+(dark?"33":"20"),color:sp.acc,padding:"3px 9px",borderRadius:99,flexShrink:0}}>{sp.badge}</div>
+                    <div style={{fontSize:11,fontWeight:700,background:sp.acc+(dark?"33":"20"),color:sp.acc,padding:"3px 9px",borderRadius:99,flexShrink:0}}>{sp.badge}</div>
                     <div style={{fontSize:10,color:T.muted,marginLeft:6}}>{isOpen?"▲":"▼"}</div>
                   </div>
                   {isOpen&&(
@@ -538,7 +611,7 @@ function App() {
                         <div style={{fontSize:10,fontWeight:700,color:T.sub,letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:3}}>Warum</div>
                         <div style={{fontSize:13,color:T.text,lineHeight:1.7,opacity:dark?0.8:0.9}}>{sp.why}</div>
                       </div>
-                      <div style={{marginTop:10,background:sp.cw?T.warnBg:T.okBg,borderRadius:8,padding:"8px 11px",fontSize:12,color:sp.cw?T.warnColor:T.okColor}}>
+                      <div style={{marginTop:10,background:sp.cw?T.warnBg:T.okBg,borderRadius:8,padding:"8px 11px",fontSize:12,color:sp.cw?T.warnC:T.okC}}>
                         {sp.cw?"⚠️ ":"✅ "}{sp.compat}
                       </div>
                     </div>
