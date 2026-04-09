@@ -296,9 +296,17 @@ function App() {
   const [expanded,  setExpanded]  = useState({});
   const [done,      setDone]      = useState({});
   const [suppFilter,setSuppFilter]= useState("all");
+  const [collapsed, setCollapsed] = useState(false);
+  const [liveClock, setLiveClock] = useState(new Date());
 
   const toggle     = id => setExpanded(p=>({...p,[id]:!p[id]}));
   const toggleDone = id => setDone(p=>({...p,[id]:!p[id]}));
+
+  // Live clock – ticks every second
+  useEffect(()=>{
+    const id = setInterval(()=>setLiveClock(new Date()), 1000);
+    return ()=>clearInterval(id);
+  },[]);
 
   const BLOCKS = BASE_BLOCKS.filter(b => b.id !== "shower" || showerOn);
   const doneCount = BLOCKS.filter(b=>done[b.id]).length;
@@ -307,6 +315,21 @@ function App() {
   const sleepH_ = Math.floor(sleepDurMins/60), sleepM_ = sleepDurMins%60;
   const sleepColor = sleepH_>=8?"#1A9862":sleepH_>=7?"#D4A017":"#C0392B";
   const sleepLabel = sleepH_>=8?"optimal":sleepH_>=7?"gut":"zu kurz";
+
+  // Live clock strings
+  const clockStr = liveClock.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  // Countdown to bedtime in seconds
+  const nowTotalSecs = liveClock.getHours()*3600 + liveClock.getMinutes()*60 + liveClock.getSeconds();
+  const bedTotalSecs = bedMins * 60;
+  let diffSecs = bedTotalSecs - nowTotalSecs;
+  if (diffSecs < 0) diffSecs += 86400; // next day
+  const cdH = Math.floor(diffSecs/3600);
+  const cdM = Math.floor((diffSecs%3600)/60);
+  const cdS = diffSecs%60;
+  const countdownStr = `${String(cdH).padStart(2,'0')}:${String(cdM).padStart(2,'0')}:${String(cdS).padStart(2,'0')}`;
+  const countdownLabel = diffSecs < 3600 ? "⚠️ Bald Bettzeit!" : diffSecs < 7200 ? "Bald schlafen" : "bis Bettzeit";
+  const countdownColor = diffSecs < 1800 ? "#C0392B" : diffSecs < 3600 ? "#D4A017" : "#1A9862";
 
   const setNow = () => setRoutineStart(timeToMins(nowTime()) - bedMins <= 0
     ? timeToMins(nowTime()) - bedMins
@@ -321,21 +344,43 @@ function App() {
         <div style={{maxWidth:860,margin:"0 auto",padding:"14px 16px 0"}}>
 
           {/* title row */}
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
-            <div>
-              <h1 style={{fontFamily:"'DM Serif Display',serif",fontSize:22,color:T.text}}>{dark?"🌑":"🌙"} Abendroutine</h1>
-              <p style={{fontSize:12,color:T.sub,marginTop:2}}>Wissenschaftlich fundiert · 88 kg · 24 J · Kniefokus</p>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <div style={{textAlign:"right"}}>
-                <div style={{fontSize:11,color:T.sub,fontWeight:600,letterSpacing:"0.04em"}}>{dark?"DARK":"LIGHT"}</div>
-                <div style={{fontSize:9,color:T.muted}}>{manualDark===null?"auto":"manuell"}</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:collapsed?10:14,flexWrap:"wrap",gap:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+              <div>
+                <h1 style={{fontFamily:"'DM Serif Display',serif",fontSize:22,color:T.text}}>{dark?"🌑":"🌙"} Abendroutine</h1>
               </div>
-              <DarkToggle dark={dark} onToggle={()=>setManualDark(!dark)}/>
+              {/* Live clock */}
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
+                <div style={{fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:600,color:T.text,letterSpacing:"0.04em",lineHeight:1}}>{clockStr}</div>
+                <div style={{fontSize:10,color:T.muted,marginTop:2,letterSpacing:"0.05em",textTransform:"uppercase"}}>Jetzt</div>
+              </div>
+              {/* Countdown */}
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",background:T.ctrl,border:`1.5px solid ${T.ctrlB}`,borderRadius:10,padding:"5px 12px"}}>
+                <div style={{fontFamily:"'DM Mono',monospace",fontSize:20,fontWeight:700,color:countdownColor,letterSpacing:"0.04em",lineHeight:1}}>{countdownStr}</div>
+                <div style={{fontSize:10,color:countdownColor,marginTop:2,fontWeight:600,letterSpacing:"0.04em"}}>{countdownLabel}</div>
+              </div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              {/* Collapse toggle */}
+              <button onClick={()=>setCollapsed(c=>!c)}
+                style={{padding:"6px 13px",borderRadius:9,border:`1.5px solid ${T.ctrlB}`,background:"transparent",
+                  color:T.sub,fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",
+                  display:"flex",alignItems:"center",gap:5,transition:"all 0.15s"}}
+                title={collapsed?"Einstellungen einblenden":"Einstellungen einklappen"}>
+                {collapsed?"⚙️ Einstellungen":"✕ Einklappen"}
+              </button>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:11,color:T.sub,fontWeight:600,letterSpacing:"0.04em"}}>{dark?"DARK":"LIGHT"}</div>
+                  <div style={{fontSize:9,color:T.muted}}>{manualDark===null?"auto":"manuell"}</div>
+                </div>
+                <DarkToggle dark={dark} onToggle={()=>setManualDark(!dark)}/>
+              </div>
             </div>
           </div>
 
-          {/* ── TIME CONTROLS ── */}
+          {/* ── TIME CONTROLS (collapsible) ── */}
+          {!collapsed && (
           <div style={{background:T.ctrl,border:`1px solid ${T.ctrlB}`,borderRadius:14,padding:"16px 18px",marginBottom:14,transition:"background 0.4s,border 0.3s"}}>
 
             {/* Row 1: Anchor + Schlafenszeit + Aufwachzeit + Bettzeit */}
@@ -435,6 +480,22 @@ function App() {
               </div>
             </div>
           </div>
+          )} {/* end collapsible */}
+
+          {/* Collapsed summary */}
+          {collapsed && (
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:10,alignItems:"center"}}>
+              <div style={{fontSize:12,color:T.sub,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                <span>🌙 <strong style={{fontFamily:"'DM Mono',monospace",color:"#4A8FD0"}}>{derivedBed}</strong></span>
+                <span style={{color:T.muted}}>·</span>
+                <span>☀️ <strong style={{fontFamily:"'DM Mono',monospace",color:"#1A9862"}}>{derivedWake}</strong></span>
+                <span style={{color:T.muted}}>·</span>
+                <span>⏱ Start <strong style={{fontFamily:"'DM Mono',monospace",color:"#3D5A80"}}>{routineStartStr}</strong></span>
+                <span style={{color:T.muted}}>·</span>
+                <span style={{color:sleepColor,fontWeight:600}}>{fmtDur(sleepDurMins)} Schlaf</span>
+              </div>
+            </div>
+          )}
 
           {/* Tabs */}
           <div style={{display:"flex",gap:2}}>
