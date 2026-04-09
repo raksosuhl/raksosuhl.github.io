@@ -374,7 +374,7 @@
 
     if (!valid) return;
 
-    const betrag    = parseFloat(betragRaw).toFixed(2);
+    const betrag    = parseFloat(betragRaw).toFixed(2).replace('.', ',');
     const desc      = beschreibung || '—';
     const kategorie = selectedCat;
     const datum     = String(dayNum);
