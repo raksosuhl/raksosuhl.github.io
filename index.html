@@ -1,461 +1,445 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="de">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2685.4">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
-    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Ausgaben" />
+  <title>Ausgaben</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #F7F6F3;
+      --surface:   #FFFFFF;
+      --border:    #E8E6E1;
+      --text:      #1A1916;
+      --muted:     #9A9790;
+      --accent:    #1A1916;
+      --accent-fg: #FFFFFF;
+      --success:   #2D6A4F;
+      --success-bg:#D8F3DC;
+      --radius:    16px;
+      --shadow:    0 2px 16px rgba(0,0,0,0.06);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100dvh;
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 24px) env(safe-area-inset-left, 0px);
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 420px;
+      padding: 48px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Amount ── */
+    .amount-block {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    label {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .amount-input-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .amount-input-row:focus-within {
+      border-color: var(--accent);
+    }
+    .currency-symbol {
+      padding: 0 14px;
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--muted);
+      background: var(--bg);
+      border-right: 1.5px solid var(--border);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
+    #betrag {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 0 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--text);
+      background: transparent;
+      height: 56px;
+      width: 100%;
+      -webkit-appearance: none;
+    }
+    #betrag::placeholder { color: var(--border); }
+
+    /* ── Description ── */
+    .desc-block {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #beschreibung {
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      color: var(--text);
+      background: transparent;
+      outline: none;
+      resize: none;
+      transition: border-color 0.15s;
+      height: 80px;
+    }
+    #beschreibung::placeholder { color: var(--border); }
+    #beschreibung:focus { border-color: var(--accent); }
+
+    /* ── Categories ── */
+    .cat-block {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .cat-btn {
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      padding: 10px 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.12s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cat-btn .icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+    .cat-btn:hover {
+      border-color: var(--accent);
+      background: var(--bg);
+    }
+    .cat-btn.active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-fg);
+    }
+    .cat-btn.active .icon { filter: brightness(5); }
+
+    /* ── Submit ── */
+    .submit-btn {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      background: var(--accent);
+      color: var(--accent-fg);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      height: 54px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .submit-btn:hover { opacity: 0.88; }
+    .submit-btn:active { transform: scale(0.98); }
+    .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid #B7E4C7;
+      border-radius: 100px;
+      padding: 12px 22px;
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 999;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Error ── */
+    .field-error {
+      font-size: 12px;
+      color: #C0392B;
+      margin-top: -4px;
+    }
+
+    /* ── Date chip ── */
+    .date-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .date-chip span { font-family: 'DM Mono', monospace; }
+
+    @media (max-width: 380px) {
+      .cat-grid { grid-template-columns: repeat(3, 1fr); }
+      .cat-btn { font-size: 12px; }
+    }
   </style>
 </head>
 <body>
-<p class="p1">&lt;!DOCTYPE html&gt;</p>
-<p class="p1">&lt;html lang="de"&gt;</p>
-<p class="p1">&lt;head&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta charset="UTF-8" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta name="apple-mobile-web-app-capable" content="yes" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta name="apple-mobile-web-app-status-bar-style" content="default" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta name="apple-mobile-web-app-title" content="Ausgaben" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;title&gt;Ausgaben&lt;/title&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;link rel="preconnect" href="https://fonts.googleapis.com" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&amp;family=DM+Mono:wght@400;500&amp;display=swap" rel="stylesheet" /&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;style&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>:root {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--bg:<span class="Apple-converted-space">        </span>#F7F6F3;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--surface: <span class="Apple-converted-space">  </span>#FFFFFF;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--border:<span class="Apple-converted-space">    </span>#E8E6E1;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--text:<span class="Apple-converted-space">      </span>#1A1916;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--muted: <span class="Apple-converted-space">    </span>#9A9790;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--accent:<span class="Apple-converted-space">    </span>#1A1916;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--accent-fg: #FFFFFF;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--success: <span class="Apple-converted-space">  </span>#2D6A4F;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--success-bg:#D8F3DC;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--radius:<span class="Apple-converted-space">    </span>16px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--shadow:<span class="Apple-converted-space">    </span>0 2px 16px rgba(0,0,0,0.06);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>html, body {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>height: 100%;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: var(--bg);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-family: 'DM Sans', sans-serif;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--text);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>-webkit-font-smoothing: antialiased;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>body {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>flex-direction: column;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>align-items: center;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>justify-content: flex-start;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>min-height: 100dvh;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 24px) env(safe-area-inset-left, 0px);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>.wrapper {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>width: 100%;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>max-width: 420px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 48px 20px 40px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>flex-direction: column;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 32px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>/* ── Header ── */</p>
-<p class="p1"><span class="Apple-converted-space">    </span>header {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>flex-direction: column;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 4px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.eyebrow {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 11px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 500;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>letter-spacing: 0.12em;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>text-transform: uppercase;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--muted);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>h1 {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 28px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 600;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>letter-spacing: -0.02em;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>line-height: 1.1;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>/* ── Card ── */</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.card {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: var(--surface);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: 1px solid var(--border);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-radius: var(--radius);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>box-shadow: var(--shadow);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 28px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>flex-direction: column;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 24px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>/* ── Amount ── */</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.amount-block {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>flex-direction: column;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 8px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>label {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 12px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 500;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>letter-spacing: 0.06em;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>text-transform: uppercase;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--muted);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.amount-input-row {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>align-items: center;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 0;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: 1.5px solid var(--border);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-radius: 12px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>overflow: hidden;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>transition: border-color 0.15s;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.amount-input-row:focus-within {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-color: var(--accent);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.currency-symbol {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 0 14px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 20px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 500;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--muted);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: var(--bg);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-right: 1.5px solid var(--border);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>height: 56px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>align-items: center;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>user-select: none;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>#betrag {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>flex: 1;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: none;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>outline: none;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 0 16px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-family: 'DM Mono', monospace;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 22px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 500;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--text);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: transparent;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>height: 56px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>width: 100%;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>-webkit-appearance: none;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>#betrag::placeholder { color: var(--border); }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>/* ── Description ── */</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.desc-block {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>flex-direction: column;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 8px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>#beschreibung {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: 1.5px solid var(--border);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-radius: 12px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 14px 16px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-family: 'DM Sans', sans-serif;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 16px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--text);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: transparent;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>outline: none;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>resize: none;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>transition: border-color 0.15s;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>height: 80px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>#beschreibung::placeholder { color: var(--border); }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>#beschreibung:focus { border-color: var(--accent); }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>/* ── Categories ── */</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.cat-block {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>flex-direction: column;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 10px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.cat-grid {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: grid;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>grid-template-columns: repeat(3, 1fr);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 8px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.cat-btn {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: 1.5px solid var(--border);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-radius: 10px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: transparent;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 10px 8px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-family: 'DM Sans', sans-serif;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 13px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 500;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--text);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>cursor: pointer;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>transition: all 0.12s ease;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>flex-direction: column;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>align-items: center;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 4px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>-webkit-tap-highlight-color: transparent;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.cat-btn .icon {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 18px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>line-height: 1;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.cat-btn:hover {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-color: var(--accent);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: var(--bg);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.cat-btn.active {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-color: var(--accent);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: var(--accent);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--accent-fg);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.cat-btn.active .icon { filter: brightness(5); }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>/* ── Submit ── */</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.submit-btn {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>width: 100%;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: none;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-radius: 12px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: var(--accent);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--accent-fg);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-family: 'DM Sans', sans-serif;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 16px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 600;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>letter-spacing: 0.01em;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>height: 54px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>cursor: pointer;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>transition: opacity 0.15s, transform 0.1s;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>-webkit-tap-highlight-color: transparent;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.submit-btn:hover { opacity: 0.88; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.submit-btn:active { transform: scale(0.98); }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>/* ── Toast ── */</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.toast {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>position: fixed;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>left: 50%;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>transform: translateX(-50%) translateY(20px);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: var(--success-bg);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--success);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: 1px solid #B7E4C7;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-radius: 100px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 12px 22px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 14px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 500;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>white-space: nowrap;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>opacity: 0;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>pointer-events: none;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>transition: opacity 0.25s ease, transform 0.25s ease;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>z-index: 999;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.toast.show {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>opacity: 1;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>transform: translateX(-50%) translateY(0);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>/* ── Error ── */</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.field-error {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 12px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: #C0392B;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>margin-top: -4px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>/* ── Date chip ── */</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.date-chip {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: inline-flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>align-items: center;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 6px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 12px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--muted);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 400;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.date-chip span { font-family: 'DM Mono', monospace; }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>@media (max-width: 380px) {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>.cat-grid { grid-template-columns: repeat(3, 1fr); }</p>
-<p class="p1"><span class="Apple-converted-space">      </span>.cat-btn { font-size: 12px; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;/style&gt;</p>
-<p class="p1">&lt;/head&gt;</p>
-<p class="p1">&lt;body&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;div class="wrapper"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;header&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;p class="eyebrow"&gt;Persönliche Finanzen&lt;/p&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;h1&gt;Ausgabe&lt;br&gt;erfassen&lt;/h1&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;/header&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;div class="card"&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Betrag --&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="amount-block"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;label for="betrag"&gt;Betrag&lt;/label&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;div class="amount-input-row"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;span class="currency-symbol"&gt;€&lt;/span&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;input</p>
-<p class="p1"><span class="Apple-converted-space">          </span>id="betrag"</p>
-<p class="p1"><span class="Apple-converted-space">          </span>type="number"</p>
-<p class="p1"><span class="Apple-converted-space">          </span>inputmode="decimal"</p>
-<p class="p1"><span class="Apple-converted-space">          </span>min="0"</p>
-<p class="p1"><span class="Apple-converted-space">          </span>step="0.01"</p>
-<p class="p1"><span class="Apple-converted-space">          </span>placeholder="0.00"</p>
-<p class="p1"><span class="Apple-converted-space">          </span>autocomplete="off"</p>
-<p class="p1"><span class="Apple-converted-space">        </span>/&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;span class="field-error" id="betrag-err" hidden&gt;Bitte einen Betrag eingeben.&lt;/span&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Beschreibung --&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="desc-block"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;label for="beschreibung"&gt;Beschreibung&lt;/label&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;textarea id="beschreibung" placeholder="Wofür war die Ausgabe?"&gt;&lt;/textarea&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Kategorie --&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="cat-block"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;Kategorie&lt;/label&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;div class="cat-grid"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button class="cat-btn" data-cat="Essen"&gt;<span class="Apple-converted-space">        </span>&lt;span class="icon"&gt;🍽️&lt;/span&gt; Essen&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button class="cat-btn" data-cat="Fast-Food"&gt; <span class="Apple-converted-space">  </span>&lt;span class="icon"&gt;🍔&lt;/span&gt; Fast-Food&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button class="cat-btn" data-cat="Trinken"&gt; <span class="Apple-converted-space">    </span>&lt;span class="icon"&gt;☕&lt;/span&gt; Trinken&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button class="cat-btn" data-cat="Drogerie"&gt;<span class="Apple-converted-space">    </span>&lt;span class="icon"&gt;🧴&lt;/span&gt; Drogerie&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button class="cat-btn" data-cat="Digitale"&gt;<span class="Apple-converted-space">    </span>&lt;span class="icon"&gt;💻&lt;/span&gt; Digitale&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button class="cat-btn" data-cat="Sonstige"&gt;<span class="Apple-converted-space">    </span>&lt;span class="icon"&gt;📦&lt;/span&gt; Sonstige&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;span class="field-error" id="cat-err" hidden&gt;Bitte eine Kategorie wählen.&lt;/span&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Date info --&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;p class="date-chip"&gt;📅 Heute: &lt;span id="today-display"&gt;&lt;/span&gt;&lt;/p&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Submit --&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;button class="submit-btn" id="submit-btn"&gt;Eintragen&lt;/button&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
-<p class="p1">&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;div class="toast" id="toast"&gt;✓ Ausgabe eingetragen&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>// ── State</p>
-<p class="p1"><span class="Apple-converted-space">  </span>let selectedCat = null;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// ── Today</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const today = new Date();</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const dayNum = today.getDate();</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const dateLabel = today.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });</p>
-<p class="p1"><span class="Apple-converted-space">  </span>document.getElementById('today-display').textContent = dateLabel;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// ── Category buttons</p>
-<p class="p1"><span class="Apple-converted-space">  </span>document.querySelectorAll('.cat-btn').forEach(btn =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>btn.addEventListener('click', () =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>document.querySelectorAll('.cat-btn').forEach(b =&gt; b.classList.remove('active'));</p>
-<p class="p1"><span class="Apple-converted-space">      </span>btn.classList.add('active');</p>
-<p class="p1"><span class="Apple-converted-space">      </span>selectedCat = btn.dataset.cat;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('cat-err').hidden = true;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>});</p>
-<p class="p1"><span class="Apple-converted-space">  </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// ── Submit</p>
-<p class="p1"><span class="Apple-converted-space">  </span>document.getElementById('submit-btn').addEventListener('click', () =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const betragRaw = document.getElementById('betrag').value.trim();</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const beschreibung = document.getElementById('beschreibung').value.trim();</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>let valid = true;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (!betragRaw || isNaN(parseFloat(betragRaw)) || parseFloat(betragRaw) &lt;= 0) {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('betrag-err').hidden = false;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>valid = false;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>} else {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('betrag-err').hidden = true;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (!selectedCat) {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('cat-err').hidden = false;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>valid = false;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>} else {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('cat-err').hidden = true;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (!valid) return;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>const betrag<span class="Apple-converted-space">    </span>= parseFloat(betragRaw).toFixed(2);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const desc<span class="Apple-converted-space">      </span>= beschreibung || '—';</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const kategorie = selectedCat;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const datum <span class="Apple-converted-space">    </span>= String(dayNum);</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>const base = 'https://docs.google.com/forms/d/e/1FAIpQLSdJBCSdlctmVTxIrMywL6HysqsfINqAgEtve3icHsYp2tpUUg/formResponse';</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const params = new URLSearchParams({</p>
-<p class="p1"><span class="Apple-converted-space">      </span>'entry.26907830': <span class="Apple-converted-space">  </span>betrag,</p>
-<p class="p1"><span class="Apple-converted-space">      </span>'entry.514198582':<span class="Apple-converted-space">  </span>desc,</p>
-<p class="p1"><span class="Apple-converted-space">      </span>'entry.1689769809': kategorie,</p>
-<p class="p1"><span class="Apple-converted-space">      </span>'entry.1969182734': datum,</p>
-<p class="p1"><span class="Apple-converted-space">      </span>'submit': <span class="Apple-converted-space">          </span>'Submit'</p>
-<p class="p1"><span class="Apple-converted-space">    </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>const url = `${base}?${params.toString()}`;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>// Submit via hidden iframe to avoid CORS/redirect issues</p>
-<p class="p1"><span class="Apple-converted-space">    </span>let iframe = document.getElementById('submit-frame');</p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (!iframe) {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>iframe = document.createElement('iframe');</p>
-<p class="p1"><span class="Apple-converted-space">      </span>iframe.id = 'submit-frame';</p>
-<p class="p1"><span class="Apple-converted-space">      </span>iframe.name = 'submit-frame';</p>
-<p class="p1"><span class="Apple-converted-space">      </span>iframe.style.display = 'none';</p>
-<p class="p1"><span class="Apple-converted-space">      </span>document.body.appendChild(iframe);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>const form = document.createElement('form');</p>
-<p class="p1"><span class="Apple-converted-space">    </span>form.method = 'POST';</p>
-<p class="p1"><span class="Apple-converted-space">    </span>form.action = base;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>form.target = 'submit-frame';</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>const fields = {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>'entry.26907830': <span class="Apple-converted-space">  </span>betrag,</p>
-<p class="p1"><span class="Apple-converted-space">      </span>'entry.514198582':<span class="Apple-converted-space">  </span>desc,</p>
-<p class="p1"><span class="Apple-converted-space">      </span>'entry.1689769809': kategorie,</p>
-<p class="p1"><span class="Apple-converted-space">      </span>'entry.1969182734': datum,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>};</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>for (const [name, value] of Object.entries(fields)) {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>const input = document.createElement('input');</p>
-<p class="p1"><span class="Apple-converted-space">      </span>input.type<span class="Apple-converted-space">  </span>= 'hidden';</p>
-<p class="p1"><span class="Apple-converted-space">      </span>input.name<span class="Apple-converted-space">  </span>= name;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>input.value = value;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>form.appendChild(input);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>document.body.appendChild(form);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>form.submit();</p>
-<p class="p1"><span class="Apple-converted-space">    </span>document.body.removeChild(form);</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>// Reset</p>
-<p class="p1"><span class="Apple-converted-space">    </span>setTimeout(() =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('betrag').value = '';</p>
-<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('beschreibung').value = '';</p>
-<p class="p1"><span class="Apple-converted-space">      </span>document.querySelectorAll('.cat-btn').forEach(b =&gt; b.classList.remove('active'));</p>
-<p class="p1"><span class="Apple-converted-space">      </span>selectedCat = null;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>showToast();</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}, 300);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// ── Toast</p>
-<p class="p1"><span class="Apple-converted-space">  </span>function showToast() {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const t = document.getElementById('toast');</p>
-<p class="p1"><span class="Apple-converted-space">    </span>t.classList.add('show');</p>
-<p class="p1"><span class="Apple-converted-space">    </span>setTimeout(() =&gt; t.classList.remove('show'), 2800);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p1">&lt;/script&gt;</p>
-<p class="p1">&lt;/body&gt;</p>
-<p class="p1">&lt;/html&gt;</p>
+
+<div class="wrapper">
+  <header>
+    <p class="eyebrow">Persönliche Finanzen</p>
+    <h1>Ausgabe<br>erfassen</h1>
+  </header>
+
+  <div class="card">
+
+    <!-- Betrag -->
+    <div class="amount-block">
+      <label for="betrag">Betrag</label>
+      <div class="amount-input-row">
+        <span class="currency-symbol">€</span>
+        <input
+          id="betrag"
+          type="number"
+          inputmode="decimal"
+          min="0"
+          step="0.01"
+          placeholder="0.00"
+          autocomplete="off"
+        />
+      </div>
+      <span class="field-error" id="betrag-err" hidden>Bitte einen Betrag eingeben.</span>
+    </div>
+
+    <!-- Beschreibung -->
+    <div class="desc-block">
+      <label for="beschreibung">Beschreibung</label>
+      <textarea id="beschreibung" placeholder="Wofür war die Ausgabe?"></textarea>
+    </div>
+
+    <!-- Kategorie -->
+    <div class="cat-block">
+      <label>Kategorie</label>
+      <div class="cat-grid">
+        <button class="cat-btn" data-cat="Essen">        <span class="icon">🍽️</span> Essen</button>
+        <button class="cat-btn" data-cat="Fast-Food">   <span class="icon">🍔</span> Fast-Food</button>
+        <button class="cat-btn" data-cat="Trinken">     <span class="icon">☕</span> Trinken</button>
+        <button class="cat-btn" data-cat="Drogerie">    <span class="icon">🧴</span> Drogerie</button>
+        <button class="cat-btn" data-cat="Digitale">    <span class="icon">💻</span> Digitale</button>
+        <button class="cat-btn" data-cat="Sonstige">    <span class="icon">📦</span> Sonstige</button>
+      </div>
+      <span class="field-error" id="cat-err" hidden>Bitte eine Kategorie wählen.</span>
+    </div>
+
+    <!-- Date info -->
+    <p class="date-chip">📅 Heute: <span id="today-display"></span></p>
+
+    <!-- Submit -->
+    <button class="submit-btn" id="submit-btn">Eintragen</button>
+
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Ausgabe eingetragen</div>
+
+<script>
+  // ── State
+  let selectedCat = null;
+
+  // ── Today
+  const today = new Date();
+  const dayNum = today.getDate();
+  const dateLabel = today.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
+  document.getElementById('today-display').textContent = dateLabel;
+
+  // ── Category buttons
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedCat = btn.dataset.cat;
+      document.getElementById('cat-err').hidden = true;
+    });
+  });
+
+  // ── Submit
+  document.getElementById('submit-btn').addEventListener('click', () => {
+    const betragRaw = document.getElementById('betrag').value.trim();
+    const beschreibung = document.getElementById('beschreibung').value.trim();
+
+    let valid = true;
+
+    if (!betragRaw || isNaN(parseFloat(betragRaw)) || parseFloat(betragRaw) <= 0) {
+      document.getElementById('betrag-err').hidden = false;
+      valid = false;
+    } else {
+      document.getElementById('betrag-err').hidden = true;
+    }
+
+    if (!selectedCat) {
+      document.getElementById('cat-err').hidden = false;
+      valid = false;
+    } else {
+      document.getElementById('cat-err').hidden = true;
+    }
+
+    if (!valid) return;
+
+    const betrag    = parseFloat(betragRaw).toFixed(2);
+    const desc      = beschreibung || '—';
+    const kategorie = selectedCat;
+    const datum     = String(dayNum);
+
+    const base = 'https://docs.google.com/forms/d/e/1FAIpQLSdJBCSdlctmVTxIrMywL6HysqsfINqAgEtve3icHsYp2tpUUg/formResponse';
+    const params = new URLSearchParams({
+      'entry.26907830':   betrag,
+      'entry.514198582':  desc,
+      'entry.1689769809': kategorie,
+      'entry.1969182734': datum,
+      'submit':           'Submit'
+    });
+
+    const url = `${base}?${params.toString()}`;
+
+    // Submit via hidden iframe to avoid CORS/redirect issues
+    let iframe = document.getElementById('submit-frame');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'submit-frame';
+      iframe.name = 'submit-frame';
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = base;
+    form.target = 'submit-frame';
+
+    const fields = {
+      'entry.26907830':   betrag,
+      'entry.514198582':  desc,
+      'entry.1689769809': kategorie,
+      'entry.1969182734': datum,
+    };
+
+    for (const [name, value] of Object.entries(fields)) {
+      const input = document.createElement('input');
+      input.type  = 'hidden';
+      input.name  = name;
+      input.value = value;
+      form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    // Reset
+    setTimeout(() => {
+      document.getElementById('betrag').value = '';
+      document.getElementById('beschreibung').value = '';
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      selectedCat = null;
+      showToast();
+    }, 300);
+  });
+
+  // ── Toast
+  function showToast() {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+</script>
 </body>
 </html>
