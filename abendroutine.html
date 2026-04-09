@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌙 Abendroutine Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>* { box-sizing: border-box; margin: 0; padding: 0; } body { background: #F7F5F0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+function timeToMins(str) {
+  const [h, m] = str.split(":").map(Number);
+  return h * 60 + m;
+}
+function minsToTime(mins) {
+  const t = ((mins % 1440) + 1440) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+const BLOCKS = [
+  {
+    id: "meal", offset: -150, duration: 30,
+    title: "Letzte Mahlzeit", emoji: "🍽️",
+    accent: "#E8722A", light: "#FEF3EB",
+    short: "Leicht & proteinreich · max. 2,5h vor Bett",
+    detail: "Hochwertige Proteinquelle (Magerquark, Hüttenkäse, weißer Fisch) + langsame Kohlenhydrate. Kein Alkohol. Mahlzeit mindestens 2,5h vor Schlaf beenden – verhindert nächtlichen Insulinanstieg und schützt die Wachstumshormon-Ausschüttung. Für Regeneration: Casein-Protein (Quark) ist ideal.",
+    science: "Res et al. (2012) – Casein vor dem Schlafen steigert Muskelproteinsynthese über Nacht um bis zu 22%",
+  },
+  {
+    id: "blue", offset: -120, duration: 0,
+    title: "Blaues Licht reduzieren", emoji: "💡",
+    accent: "#D4A017", light: "#FEFAEB",
+    short: "Night Shift aktivieren · Raumlicht dimmen auf <10 Lux",
+    detail: "Blaues Licht (~480 nm) blockiert Melatoninausschüttung um bis zu 3 Stunden. Aktiviere Night Shift / f.lux auf allen Geräten. Deckenlampe durch Stehlampe oder Kerze ersetzen. Blaulichtfilterbrille optional. Social Media jetzt weglegen – kognitiver Arousal ist der #1-Schlafkiller.",
+    science: "Chang et al. (2015), PNAS – LED-Bildschirme vor Schlaf verzögern Einschlafzeit & reduzieren REM-Anteil signifikant",
+  },
+  {
+    id: "supps1", offset: -90, duration: 5,
+    title: "Supplements zur Mahlzeit", emoji: "💊",
+    accent: "#2E86C1", light: "#EBF5FB",
+    short: "Omega 3 · Vitamin D3/K2 · Creatin",
+    detail: "Diese Supplements brauchen Fett zur Absorption oder sind zeitunabhängig:\n• Omega 3 (3g EPA/DHA): Mit fettreicher Mahlzeit – stark anti-inflammatorisch, besonders relevant für dein Knieödem!\n• Vitamin D3 (3000 IU) + K2 MK-7 (200µg): Immer mit Fett einnehmen, sonst kaum Wirkung\n• Creatin (5g): Zeitpunkt egal, aber täglich konsistent – jetzt zur Mahlzeit ist prima",
+    science: "Heaney et al. (2012) – D3-Absorption steigt um 56% mit fettreicher Mahlzeit; Omega 3 reduziert Entzündungsmarker (CRP) nachweislich",
+  },
+  {
+    id: "move", offset: -75, duration: 30,
+    title: "Foam Roll & Stretching", emoji: "🧘",
+    accent: "#1A9862", light: "#EAFAF1",
+    short: "30 Min · Knie-schonend · Tab Bewegung für alle Übungen",
+    detail: "Foam Rolling senkt Muskelspannung, verbessert Durchblutung und beschleunigt Regeneration. WICHTIG: Kein direktes Rollen auf dem Knie oder Ödembereich! Umliegende Muskeln (Quad, IT-Band, Wade, Hamstring, Gesäß) entlasten das Knie. Dehnen danach aktiviert den Parasympathikus – perfekte Vorbereitung für den Schlaf.",
+    science: "Wiewelhove et al. (2019) – Foam Rolling nach Training reduziert DOMS & verbessert Range of Motion signifikant",
+    highlight: true,
+  },
+  {
+    id: "shower", offset: -40, duration: 10,
+    title: "Warme Dusche", emoji: "🚿",
+    accent: "#0097A7", light: "#E0F7FA",
+    short: "37–40°C · 10 Min · kein kaltes Wasser direkt vor Bett",
+    detail: "Warmes Wasser erhöht kurzfristig die Körperkerntemperatur. Der anschließende Temperaturabfall signalisiert dem Körper Schlafbereitschaft (distale Vasodilatation). 1–2h vor dem Schlafen ist der optimale Zeitpunkt. Kalt-Warm-Wechsel nur an Trainingstagen und mind. 2h vor Bett.",
+    science: "Haghayegh et al. (2019) – Warme Dusche 1–2h vor Schlaf verkürzt Einschlafzeit um durchschnittlich 36%",
+  },
+  {
+    id: "supps2", offset: -30, duration: 5,
+    title: "Abend-Supplements", emoji: "🌙",
+    accent: "#7B3FA0", light: "#F5EBF9",
+    short: "Magnesium Glycinat · Zink · NAC",
+    detail: "Diese drei zusammen 30 Min vor dem Schlafen:\n• Magnesium Glycinat (450mg): GABA-Modulation → tieferer Slow-Wave-Sleep, weniger Krämpfe – Pflicht für Sportler!\n• Zink (25mg): Testosteron, Immunsystem, Schlafqualität. Abends um Wechselwirkung mit Eisen (morgens!) zu vermeiden\n• NAC (600mg): Vorläufer von Glutathion, anti-inflammatorisch → direkt relevant für dein Knieödem. JA – nachbestellen!\n\n⚠️ Wichtig: Zink und Eisen NIEMALS zusammen – mind. 6h Abstand!",
+    science: "Held et al. (2002) – Magnesium erhöht Slow-Wave-Sleep; Rondanelli et al. (2011) – Zn+Mg verbessern Schlafqualität messbar",
+  },
+  {
+    id: "winddown", offset: -20, duration: 20,
+    title: "Wind-Down Ritual", emoji: "📖",
+    accent: "#3D5A80", light: "#EAF0F9",
+    short: "Lesen · Box Breathing · Dankbarkeitsjournal",
+    detail: "Parasympathikus aktiv einschalten:\n• Box Breathing: 4s einatmen – 4s halten – 4s ausatmen – 4s halten (3–5 Min) → senkt Cortisol nachweislich\n• Physisches Buch lesen (kein Bildschirm!)\n• 3 Dinge aufschreiben, für die du dankbar bist\n• Raumtemperatur: 18–20°C optimal für Schlaf\n• Handy auf Flugmodus oder ins andere Zimmer",
+    science: "Harvey & Farrell (2003) – Pre-sleep kognitiver Arousal ist Hauptursache für Einschlafschwierigkeiten; Benson et al. (1975) – Atemübungen senken Cortisol um 23%",
+  },
+  {
+    id: "sleep", offset: 0, duration: 0,
+    title: "Schlafenszeit", emoji: "😴",
+    accent: "#2C3E50", light: "#F4F6F7",
+    short: "Dunkel · 18–20°C · kein Handy im Schlafzimmer",
+    detail: "Optimale Schlafumgebung:\n• Blackout-Vorhänge oder Schlafmaske – Licht stört Melatonin auch durch geschlossene Lider!\n• Ohrstöpsel oder weißes Rauschen bei Straßenlärm\n• Handy außerhalb Schlafzimmer\n• Nasenklebeband für reine Nasenatmung (verbessert Schlaftiefe und Sauerstoffsättigung)\n• Deine Schlafdauer: 9h – optimal für dein Alter, Trainingspensum und Knieregeneration",
+    science: "Walker (2017) – Why We Sleep; Grandner et al. (2010) – Schlafumgebungsoptimierung erhöht Schlafeffizienz um 18%",
+  },
+];
+
+const EXERCISES = [
+  { type: "foam", name: "Quadrizeps", side: "je Seite", duration: "2 Min", emoji: "🦵", warn: true,
+    instruction: "Auf dem Bauch, Foam Roll unter dem Oberschenkel. Langsam von der Hüfte bis 5–6 cm OBERHALB der Kniescheibe rollen. Bei einem Druckpunkt 20–30 Sek halten. Das andere Bein kann abstützen um Druck zu regulieren.",
+    warning: "⚠️ Knie komplett auslassen! Stop mindestens 5–6 cm vor der Kniescheibe." },
+  { type: "foam", name: "IT-Band / TFL", side: "je Seite", duration: "90 Sek", emoji: "↔️", warn: true,
+    instruction: "Seitenlage, Foam Roll unter der Außenseite des Oberschenkels. Von der Hüfte bis 5 cm oberhalb des Knieaußenrandes. Oberes Bein abstützen. Langsam und kontrolliert – dieser Bereich ist oft sehr empfindlich.",
+    warning: "⚠️ Nie auf dem Kniegelenk oder Schienbein rollen!" },
+  { type: "foam", name: "Waden (Gastrocnemius)", side: "je Seite", duration: "90 Sek", emoji: "🦶", warn: false,
+    instruction: "Sitzend, Foam Roll unter der Wade. Hände abstützen, Körpergewicht auf die Wade verlagern. Von der Kniekehle bis zum Sprunggelenk. Das andere Bein überkreuzen für mehr Druck.",
+    warning: null },
+  { type: "foam", name: "Hamstrings", side: "je Seite", duration: "90 Sek", emoji: "🔙", warn: true,
+    instruction: "Sitzend, Foam Roll unter dem hinteren Oberschenkel. Von der Gesäßfalte bis 5 cm oberhalb der Kniekehle. Nicht direkt in die Kniekehle rollen – dort verlaufen empfindliche Nerven und Gefäße.",
+    warning: "⚠️ Kniekehle auslassen – 5 cm Abstand halten!" },
+  { type: "foam", name: "Gesäß / Piriformis", side: "je Seite", duration: "2 Min", emoji: "🍑", warn: false,
+    instruction: "Sitzend auf dem Foam Roll, das zu behandelnde Bein über das andere legen (Fußknöchel auf Knie, Figur-4-Position). Körpergewicht auf die Gesäßseite verlagern und langsam kleine Kreise oder Längsrollungen durchführen.",
+    warning: null },
+  { type: "stretch", name: "Quadrizeps-Stretch", side: "je Seite", duration: "45 Sek", emoji: "🦵", warn: true,
+    instruction: "Stehend: Ferse zur Gesäßfalte ziehen, Knie nach unten zeigend, an Wand stützen. Schonendere Alternative: In Bauchlage, Ferse zur Gesäßfalte ziehen und mit Hand halten. Keine Schmerzen im Kniegelenk tolerieren!",
+    warning: "⚠️ Nur bis zur Dehngrenze – kein Schmerz im Knie! Bei Schmerzen: Bauchlage-Variante nutzen." },
+  { type: "stretch", name: "Hüftbeuger-Ausfallschritt", side: "je Seite", duration: "60 Sek", emoji: "🏃", warn: false,
+    instruction: "Im Kniestand (hinteres Knie auf dem Boden), vorderes Bein nach vorne. Becken nach vorne schieben, Oberkörper aufrecht. Für Knieschonung: Kissen oder gefaltetes Handtuch unter das hintere Knie legen.",
+    warning: null },
+  { type: "stretch", name: "Hamstring (liegend)", side: "je Seite", duration: "45 Sek", emoji: "📐", warn: false,
+    instruction: "Rückenlage. Ein Bein gerade anheben, Hände hinter der Oberschenkelrückseite (nicht hinter dem Knie!). Ferse zur Decke strecken bis leichte Dehnung im hinteren Oberschenkel spürbar. Knie kann leicht gebeugt bleiben.",
+    warning: null },
+  { type: "stretch", name: "Wade Gastrocnemius", side: "je Seite", duration: "45 Sek", emoji: "↕️", warn: false,
+    instruction: "Wandstütz: Hinteres Bein gestreckt, Ferse am Boden, Zehen zur Wand zeigend. Körper nach vorne lehnen. Knie des gestreckten Beins durchgedrückt halten für maximale Dehnung.",
+    warning: null },
+  { type: "stretch", name: "Wade Soleus", side: "je Seite", duration: "45 Sek", emoji: "↕️", warn: false,
+    instruction: "Wie Gastrocnemius-Stretch, aber das hintere Knie leicht beugen. Dehnt den tiefer liegenden Soleus – besonders wichtig bei Knieproblemen! Ferse muss am Boden bleiben.",
+    warning: null },
+  { type: "stretch", name: "Taubenpose (Piriformis/Hüfte)", side: "je Seite", duration: "60 Sek", emoji: "🕊️", warn: true,
+    instruction: "Vorderes Bein im ~90° Winkel vor dem Körper, hinteres Bein gestreckt. Oberkörper aufrecht oder nach vorne beugen. Schonendere Variante: Auf dem Rücken liegend, ein Knie über das andere (Figur-4-Stretch) – weniger Belastung fürs Knie!",
+    warning: "⚠️ Bei Kniebeschwerden unbedingt die Rückenlage-Variante (Figur-4) wählen!" },
+  { type: "stretch", name: "Kindpose (Abschluss)", side: "—", duration: "60 Sek", emoji: "🧸", warn: false,
+    instruction: "Knieend, Gesäß zu den Fersen, Arme nach vorne strecken. Tief in den Bauch einatmen, bei Ausatmung tiefer in die Dehnung sinken. Routine endet hier – signalisiert dem Nervensystem Entspannung.",
+    warning: "Falls Kniebeugen schmerzt: Gefaltetes Handtuch oder Kissen unter die Knie legen." },
+];
+
+const SUPPLEMENTS = [
+  { time: "morning", name: "Eisen + Vitamin C", dose: "18–25 mg Eisen · 200 mg Vit C", when: "Morgens nüchtern, 30 Min vor dem Frühstück", emoji: "🔴",
+    accent: "#C0392B", light: "#FDEDEC", badge: "Morgens",
+    why: "Vitamin C steigert Eisen-Absorption (Non-Häm) um bis zu 300%. Nüchtern bedeutet: keine Konkurrenz durch Kalzium, Zink oder Phytate aus Getreide.",
+    compat: "NIEMALS zusammen mit Zink, Kalzium oder Magnesium! Mind. 6h Abstand zu Zink (abends).", compatWarn: true, priority: false },
+  { time: "morning", name: "Vitamin B-Komplex", dose: "1 Kapsel laut Produktdosierung", when: "Morgens zum Frühstück", emoji: "🟡",
+    accent: "#D4AC0D", light: "#FEFAEB", badge: "Morgens",
+    why: "B-Vitamine (besonders B6, B12) haben eine anregende Wirkung – morgens nehmen, niemals abends! Fördert Energiestoffwechsel und Erholung.",
+    compat: "Verträgt sich gut mit Frühstück und Vitamin D. Niemals abends.", compatWarn: false, priority: false },
+  { time: "morning", name: "Creatin Monohydrat", dose: "5 g täglich (bei 88 kg optimal)", when: "Morgens oder nach dem Training – Zeitpunkt egal, Konsistenz wichtig", emoji: "⚡",
+    accent: "#1A6BB5", light: "#EBF5FB", badge: "Flexibel",
+    why: "Das am besten belegte Supplement überhaupt. Bei 88 kg: 5g/Tag, kein Laden nötig. Wirkung nach 2–4 Wochen: +8–14% Kraftleistung, bessere Regeneration.",
+    compat: "Verträgt sich mit allem. Täglich und konsistent nehmen!", compatWarn: false, priority: true },
+  { time: "dinner", name: "Omega 3", dose: "3 g EPA/DHA (bei 88 kg)", when: "Zur Abendmahlzeit (Fett nötig für Absorption)", emoji: "🐟",
+    accent: "#E8722A", light: "#FEF3EB", badge: "Abendessen",
+    why: "EPA/DHA sind stark anti-inflammatorisch – besonders relevant für dein Knieödem! Verbessert außerdem Schlafqualität durch Serotonin-Modulation.",
+    compat: "Gut zusammen mit Vitamin D3/K2 zur Mahlzeit.", compatWarn: false, priority: true },
+  { time: "dinner", name: "Vitamin D3 + K2", dose: "D3: 3000 IU · K2 MK-7: 200 µg", when: "Zur fettreichen Abendmahlzeit", emoji: "☀️",
+    accent: "#B7950B", light: "#FEF9E7", badge: "Abendessen",
+    why: "D3 ist fettlöslich – braucht Fett zur Aufnahme. K2 lenkt Kalzium in Knochen. In München mit wenig Sonne: fast jeder hat Mangel!",
+    compat: "Synergistisch mit Omega 3. MK-7 Form von K2 bevorzugen.", compatWarn: false, priority: false },
+  { time: "bed", name: "Magnesium Glycinat", dose: "450 mg (bei 88 kg)", when: "30 Min vor dem Schlafen", emoji: "💜",
+    accent: "#7B3FA0", light: "#F5EBF9", badge: "Vor Schlaf",
+    why: "Glycinat-Form hat beste Bioverfügbarkeit. Aktiviert GABA-Rezeptoren → tieferer Slow-Wave-Sleep, weniger Muskelkrämpfe. Pflicht für Sportler!",
+    compat: "Verträgt sich gut mit Zink & NAC. Niemals zusammen mit Eisen (morgens)!", compatWarn: false, priority: true },
+  { time: "bed", name: "Zink", dose: "25 mg (Bisglycinat oder Gluconat)", when: "30 Min vor dem Schlafen", emoji: "🔵",
+    accent: "#17A589", light: "#E8F8F5", badge: "Vor Schlaf",
+    why: "Zink unterstützt Testosteronproduktion, Immunsystem und Schlafqualität. Abends nehmen damit Eiseneinnahme (morgens) nicht gestört wird.",
+    compat: "NIEMALS zusammen mit Eisen! Mind. 6h Abstand. Verträgt sich mit Magnesium & NAC.", compatWarn: true, priority: false },
+  { time: "bed", name: "NAC (N-Acetylcystein)", dose: "600 mg", when: "30 Min vor dem Schlafen", emoji: "🌿",
+    accent: "#27AE60", light: "#EAFAF1", badge: "Vor Schlaf",
+    why: "Vorläufer von Glutathion – dem stärksten körpereigenen Antioxidans. Anti-inflammatorisch → direkt relevant für dein Knieödem! JA – nachbestellen!",
+    compat: "Verträgt sich sehr gut mit Magnesium & Zink.", compatWarn: false, priority: true },
+  { time: "note", name: "Protein", dose: "Ziel: 158–193 g täglich (1,8–2,2 g/kg)", when: "Über den Tag verteilt – letzte Portion abends als Quark/Hüttenkäse (Casein)", emoji: "💪",
+    accent: "#7F8C8D", light: "#F2F3F4", badge: "Flexibel",
+    why: "Protein ist die wichtigste Variable für Regeneration. Quark abends = langsame Casein-Freisetzung über 6–8h. Pulver nur wenn Tagesziel nicht durch Essen erreicht.",
+    compat: "Verträgt sich mit allem.", compatWarn: false, priority: false },
+];
+
+function App() {
+  const [mode, setMode] = useState("bed");
+  const [bedTime, setBedTime] = useState("22:30");
+  const [wakeTime, setWakeTime] = useState("08:00");
+  const [sleepGoalH, setSleepGoalH] = useState(9);
+  const [sleepGoalM, setSleepGoalM] = useState(0);
+  const [tab, setTab] = useState("timeline");
+  const [expanded, setExpanded] = useState({});
+  const [done, setDone] = useState({});
+  const [suppFilter, setSuppFilter] = useState("all");
+
+  const sleepGoalMins = sleepGoalH * 60 + sleepGoalM;
+  const computedBedMins = mode === "bed" ? timeToMins(bedTime) : ((timeToMins(wakeTime) - sleepGoalMins + 1440) % 1440);
+  const computedWakeMins = mode === "wake" ? timeToMins(wakeTime) : ((timeToMins(bedTime) + sleepGoalMins) % 1440);
+  const displayBed = minsToTime(computedBedMins);
+  const displayWake = minsToTime(computedWakeMins);
+  const sleepDuration = ((computedWakeMins - computedBedMins + 1440) % 1440);
+  const sleepH = Math.floor(sleepDuration / 60);
+  const sleepM = sleepDuration % 60;
+  const blockTime = (offset) => minsToTime(computedBedMins + offset);
+  const routineStart = blockTime(-150);
+  const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggleDone = (id) => setDone(prev => ({ ...prev, [id]: !prev[id] }));
+  const filteredSupps = SUPPLEMENTS.filter(s => suppFilter === "all" || s.time === suppFilter);
+  const doneCount = BLOCKS.filter(b => done[b.id]).length;
+  const sleepColor = sleepH >= 8 ? "#1A9862" : sleepH >= 7 ? "#D4A017" : "#C0392B";
+  const sleepLabel = sleepH >= 8 ? "optimal" : sleepH >= 7 ? "gut" : "zu kurz";
+
+  const s = {
+    app: { fontFamily: "'DM Sans', sans-serif", minHeight: "100vh", background: "#F7F5F0" },
+    hdr: { background: "#fff", borderBottom: "1px solid #E5E2DA", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" },
+    hIn: { maxWidth: 780, margin: "0 auto", padding: "14px 16px 0" },
+    tRow: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 },
+    h1: { fontFamily: "'DM Serif Display', serif", fontSize: 22, color: "#1a1a1a" },
+    sub: { fontSize: 12, color: "#999", marginTop: 2 },
+    tc: { display: "flex", alignItems: "center", gap: 10, background: "#F7F5F0", borderRadius: 12, padding: "8px 14px", border: "1px solid #E5E2DA", flexWrap: "wrap" },
+    tLbl: { fontSize: 10, color: "#999", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" },
+    tIn: (c) => ({ fontSize: 19, fontWeight: 700, color: c, background: "transparent", border: "none", outline: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", width: 78 }),
+    tSt: (c) => ({ fontSize: 19, fontWeight: 700, color: c }),
+    div: { color: "#ccc", fontSize: 18 },
+    tabs: { display: "flex", gap: 2 },
+    tab: (a) => ({ padding: "8px 16px", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer", borderRadius: "8px 8px 0 0", background: a ? "#3D5A80" : "transparent", color: a ? "#fff" : "#888" }),
+    body: { maxWidth: 780, margin: "0 auto", padding: "20px 16px 60px" },
+    prog: { background: "#E5E2DA", borderRadius: 99, height: 4, marginBottom: 18, overflow: "hidden" },
+    progF: (w) => ({ height: "100%", borderRadius: 99, background: "#1A9862", width: `${w}%`, transition: "width 0.4s" }),
+    infoB: (c) => ({ background: c + "15", border: `1px solid ${c}30`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#333", marginBottom: 14 }),
+    card: (bg, acc, dn, hi) => ({ background: dn ? "#FAFAFA" : bg, border: `2px solid ${dn ? "#E5E2DA" : hi ? acc : acc + "40"}`, borderRadius: 14, marginBottom: 10, overflow: "hidden", opacity: dn ? 0.65 : 1, boxShadow: hi ? `0 2px 12px ${acc}20` : "none" }),
+    cTop: { display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: "pointer" },
+    chk: (ck, acc) => ({ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${ck ? acc : "#DDD"}`, background: ck ? acc : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, cursor: "pointer", flexShrink: 0 }),
+    tPill: (acc) => ({ background: acc + "15", color: acc, fontSize: 12, fontWeight: 700, padding: "3px 9px", borderRadius: 99, flexShrink: 0, fontFamily: "monospace" }),
+    cTit: { fontWeight: 600, fontSize: 14, color: "#1a1a1a" },
+    cSub: { fontSize: 12, color: "#888", marginTop: 1 },
+    cBody: (acc) => ({ padding: "0 14px 12px", borderTop: `1px solid ${acc}20` }),
+    det: { fontSize: 13, color: "#555", lineHeight: 1.75, marginTop: 10, whiteSpace: "pre-line" },
+    sci: { marginTop: 10, background: "rgba(255,255,255,0.85)", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#999", fontStyle: "italic" },
+    hiBdg: (acc) => ({ fontSize: 10, background: acc, color: "#fff", padding: "2px 8px", borderRadius: 99, fontWeight: 700, marginLeft: 4 }),
+    secT: { fontFamily: "'DM Serif Display', serif", fontSize: 18, color: "#1a1a1a", marginBottom: 3 },
+    secS: { fontSize: 12, color: "#999", marginBottom: 14 },
+    exC: (w) => ({ background: w ? "#FEF8F2" : "#fff", border: `1px solid ${w ? "#F0C896" : "#E5E2DA"}`, borderRadius: 12, marginBottom: 8, overflow: "hidden" }),
+    exT: { display: "flex", alignItems: "center", gap: 10, padding: "11px 13px", cursor: "pointer" },
+    exN: { fontWeight: 600, fontSize: 14, color: "#1a1a1a" },
+    exM: { fontSize: 11, color: "#999" },
+    wTag: { marginLeft: "auto", fontSize: 10, background: "#FDE8C8", color: "#A04000", padding: "2px 8px", borderRadius: 99, fontWeight: 700, flexShrink: 0 },
+    exB: { padding: "0 13px 11px", borderTop: "1px solid #F0EDE7" },
+    exTx: { fontSize: 13, color: "#555", lineHeight: 1.7, marginTop: 8 },
+    wBox: { marginTop: 8, background: "#FEF3E2", borderRadius: 8, padding: "7px 11px", fontSize: 12, color: "#A04000" },
+    fRow: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 },
+    fBtn: (a) => ({ padding: "6px 13px", fontSize: 12, fontWeight: 600, borderRadius: 99, border: `1px solid ${a ? "#3D5A80" : "#DDD"}`, background: a ? "#3D5A80" : "#fff", color: a ? "#fff" : "#888", cursor: "pointer" }),
+    spC: (sp) => ({ background: sp.light, border: `2px solid ${sp.accent}30`, borderRadius: 14, marginBottom: 10, overflow: "hidden", boxShadow: sp.priority ? `0 2px 10px ${sp.accent}18` : "none" }),
+    spT: { display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: "pointer" },
+    spBdg: (acc) => ({ marginLeft: "auto", fontSize: 11, fontWeight: 700, background: acc + "20", color: acc, padding: "3px 9px", borderRadius: 99, flexShrink: 0 }),
+    spB: { padding: "0 14px 12px", borderTop: "1px solid rgba(0,0,0,0.06)" },
+    wkC: { background: "#FFFBEB", border: "2px solid #F5CBA7", borderRadius: 14, padding: 14, marginTop: 14 },
+    chv: { fontSize: 10, color: "#CCC", marginLeft: "auto", flexShrink: 0 },
+    sep: { width: 1, background: "#E5E2DA", alignSelf: "stretch" },
+  };
+
+  return (
+    <div style={s.app}>
+      <div style={s.hdr}>
+        <div style={s.hIn}>
+          <div style={s.tRow}>
+            <div>
+              <h1 style={s.h1}>🌙 Abendroutine</h1>
+              <p style={s.sub}>Wissenschaftlich fundiert · 88 kg · 24 J · Kniefokus</p>
+            </div>
+            <div style={s.tc}>
+              {/* Mode */}
+              <div>
+                <div style={s.tLbl}>Modus</div>
+                <div style={{ display: "flex", borderRadius: 7, overflow: "hidden", border: "1px solid #E5E2DA", marginTop: 3 }}>
+                  <button onClick={() => setMode("bed")} style={{ padding: "4px 10px", fontSize: 11, fontWeight: 700, border: "none", cursor: "pointer", background: mode === "bed" ? "#3D5A80" : "#fff", color: mode === "bed" ? "#fff" : "#888" }}>🌙 Bettzeit</button>
+                  <button onClick={() => setMode("wake")} style={{ padding: "4px 10px", fontSize: 11, fontWeight: 700, border: "none", cursor: "pointer", background: mode === "wake" ? "#1A9862" : "#fff", color: mode === "wake" ? "#fff" : "#888" }}>☀️ Aufwachen</button>
+                </div>
+              </div>
+              <div style={s.sep} />
+              {/* Bed */}
+              <div style={{ textAlign: "center" }}>
+                <div style={{ ...s.tLbl, color: mode === "bed" ? "#3D5A80" : "#BBB" }}>Bettgehzeit</div>
+                {mode === "bed"
+                  ? <input type="time" value={bedTime} onChange={e => setBedTime(e.target.value)} style={s.tIn("#3D5A80")} />
+                  : <div style={s.tSt("#AAA")}>{displayBed}</div>}
+              </div>
+              <div style={s.div}>→</div>
+              {/* Wake */}
+              <div style={{ textAlign: "center" }}>
+                <div style={{ ...s.tLbl, color: mode === "wake" ? "#1A9862" : "#BBB" }}>Aufwachen</div>
+                {mode === "wake"
+                  ? <input type="time" value={wakeTime} onChange={e => setWakeTime(e.target.value)} style={s.tIn("#1A9862")} />
+                  : <div style={s.tSt("#1A9862")}>{displayWake}</div>}
+              </div>
+              <div style={s.sep} />
+              {/* Sleep goal */}
+              <div style={{ textAlign: "center" }}>
+                <div style={s.tLbl}>Schlafdauer</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 3 }}>
+                  <input type="number" min={4} max={12} value={sleepGoalH} onChange={e => setSleepGoalH(Number(e.target.value))}
+                    style={{ width: 34, fontSize: 18, fontWeight: 700, color: sleepColor, border: "none", background: "transparent", outline: "none", textAlign: "center", fontFamily: "'DM Sans', sans-serif" }} />
+                  <span style={{ fontSize: 12, color: "#999" }}>h</span>
+                  <input type="number" min={0} max={59} step={15} value={sleepGoalM} onChange={e => setSleepGoalM(Number(e.target.value))}
+                    style={{ width: 30, fontSize: 18, fontWeight: 700, color: sleepColor, border: "none", background: "transparent", outline: "none", textAlign: "center", fontFamily: "'DM Sans', sans-serif" }} />
+                  <span style={{ fontSize: 12, color: "#999" }}>m</span>
+                </div>
+                <div style={{ fontSize: 10, color: sleepColor, fontWeight: 700 }}>{sleepLabel}</div>
+              </div>
+            </div>
+          </div>
+          <div style={s.tabs}>
+            {[["timeline", "⏱ Timeline"], ["move", "🧘 Bewegung"], ["supps", "💊 Supplements"]].map(([id, label]) => (
+              <button key={id} style={s.tab(tab === id)} onClick={() => setTab(id)}>{label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={s.body}>
+
+        {/* TIMELINE */}
+        {tab === "timeline" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div style={{ fontSize: 13, color: "#999" }}>Routine ab <strong style={{ color: "#3D5A80" }}>{routineStart}</strong> · ca. 2,5 Stunden</div>
+              <div style={{ fontSize: 12, color: "#1A9862", fontWeight: 600 }}>{doneCount}/{BLOCKS.length} erledigt</div>
+            </div>
+            <div style={s.prog}><div style={s.progF((doneCount / BLOCKS.length) * 100)} /></div>
+            {sleepH < 8 && (
+              <div style={s.infoB("#E8722A")}>⚡ <strong>Tipp:</strong> Mit {sleepH}h {sleepM}m Schlaf liegst du unter dem Optimum. Früher ins Bett gehen – Schlaf ist das wirksamste Recovery-Tool!</div>
+            )}
+            {BLOCKS.map((b) => {
+              const t = blockTime(b.offset);
+              const isOpen = expanded[b.id];
+              const isDone = done[b.id];
+              return (
+                <div key={b.id} style={s.card(b.light, b.accent, isDone, b.highlight)}>
+                  <div style={s.cTop} onClick={() => toggle(b.id)}>
+                    <button style={s.chk(isDone, b.accent)} onClick={e => { e.stopPropagation(); toggleDone(b.id); }}>{isDone && "✓"}</button>
+                    <div style={s.tPill(b.accent)}>{t}</div>
+                    <div style={{ fontSize: 18, flexShrink: 0 }}>{b.emoji}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={s.cTit}>{b.title}</span>
+                        {b.highlight && <span style={s.hiBdg(b.accent)}>Wichtig</span>}
+                      </div>
+                      <div style={s.cSub}>{b.short}</div>
+                    </div>
+                    {b.duration > 0 && <div style={{ fontSize: 11, color: "#BBB", flexShrink: 0, marginRight: 6 }}>{b.duration} Min</div>}
+                    <div style={s.chv}>{isOpen ? "▲" : "▼"}</div>
+                  </div>
+                  {isOpen && (
+                    <div style={s.cBody(b.accent)}>
+                      <p style={s.det}>{b.detail}</p>
+                      <div style={s.sci}>📚 {b.science}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div style={s.wkC}>
+              <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: "#B7770D" }}>☀️ {displayWake} – Aufstehen & Morgen-Supplements</div>
+              <div style={{ fontSize: 13, color: "#7D6608", marginTop: 8, lineHeight: 1.7 }}>
+                <strong>Nüchtern (sofort):</strong> Eisen + Vitamin C (30 Min vor Essen warten)<br />
+                <strong>Zum Frühstück:</strong> Vitamin B-Komplex · Creatin (5g)<br />
+                <strong>Zur Mahlzeit mit Fett:</strong> Vitamin D3/K2
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* BEWEGUNG */}
+        {tab === "move" && (
+          <div>
+            <div style={{ background: "#FEF3E2", border: "1px solid #F0C896", borderRadius: 12, padding: "12px 14px", marginBottom: 18, fontSize: 13, color: "#784212", lineHeight: 1.6 }}>
+              <strong>⚠️ Knieödem-Hinweis (Überbelastung, Marathon 2025):</strong> Kein direktes Foam Rolling auf dem Kniegelenk oder Ödembereich! Umliegende Strukturen entlasten. Bei Schmerzen sofort aufhören.
+            </div>
+            <div style={{ ...s.secT, marginBottom: 2 }}>🔵 Foam Rolling</div>
+            <div style={s.secS}>~13 Minuten · Rollen mit Körpergewicht, langsam und kontrolliert</div>
+            {EXERCISES.filter(e => e.type === "foam").map((ex, i) => {
+              const key = "fr" + i;
+              return (
+                <div key={key} style={s.exC(ex.warn)}>
+                  <div style={s.exT} onClick={() => toggle(key)}>
+                    <div style={{ fontSize: 18 }}>{ex.emoji}</div>
+                    <div><div style={s.exN}>{ex.name}</div><div style={s.exM}>{ex.duration} · {ex.side}</div></div>
+                    {ex.warn && <div style={s.wTag}>⚠️ Knie</div>}
+                    <div style={{ ...s.chv, marginLeft: ex.warn ? 6 : "auto" }}>{expanded[key] ? "▲" : "▼"}</div>
+                  </div>
+                  {expanded[key] && <div style={s.exB}><p style={s.exTx}>{ex.instruction}</p>{ex.warning && <div style={s.wBox}>{ex.warning}</div>}</div>}
+                </div>
+              );
+            })}
+            <div style={{ ...s.secT, marginTop: 22, marginBottom: 2 }}>🟢 Stretching</div>
+            <div style={s.secS}>~15 Minuten · Statisch halten, tief atmen</div>
+            {EXERCISES.filter(e => e.type === "stretch").map((ex, i) => {
+              const key = "st" + i;
+              return (
+                <div key={key} style={s.exC(ex.warn)}>
+                  <div style={s.exT} onClick={() => toggle(key)}>
+                    <div style={{ fontSize: 18 }}>{ex.emoji}</div>
+                    <div><div style={s.exN}>{ex.name}</div><div style={s.exM}>{ex.duration}</div></div>
+                    {ex.warn && <div style={s.wTag}>⚠️ Knie</div>}
+                    <div style={{ ...s.chv, marginLeft: ex.warn ? 6 : "auto" }}>{expanded[key] ? "▲" : "▼"}</div>
+                  </div>
+                  {expanded[key] && <div style={s.exB}><p style={s.exTx}>{ex.instruction}</p>{ex.warning && <div style={s.wBox}>{ex.warning}</div>}</div>}
+                </div>
+              );
+            })}
+            <div style={{ background: "#EBF5FB", border: "1px solid #AED6F1", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#1A5276", marginTop: 14 }}>
+              <strong>⚡ Routine kürzen auf 20 Min?</strong><br />
+              Quadrizeps FR → IT-Band FR → Wadenstretch → Hüftbeuger-Ausfallschritt → Taubenpose → Kindpose.
+            </div>
+          </div>
+        )}
+
+        {/* SUPPLEMENTS */}
+        {tab === "supps" && (
+          <div>
+            <div style={{ background: "#FDEDEC", border: "1px solid #F5B7B1", borderRadius: 12, padding: "12px 14px", marginBottom: 14, fontSize: 13, color: "#922B21", lineHeight: 1.6 }}>
+              <strong>⚠️ Wichtigste Interaktion:</strong> Eisen (morgens nüchtern) und Zink (abends) <strong>NIEMALS zusammen</strong> – mindestens 6h Abstand!
+            </div>
+            <div style={s.fRow}>
+              {[["all", "Alle"], ["morning", "☀️ Morgens"], ["dinner", "🍽️ Abendessen"], ["bed", "🌙 Vor Schlaf"]].map(([id, label]) => (
+                <button key={id} style={s.fBtn(suppFilter === id)} onClick={() => setSuppFilter(id)}>{label}</button>
+              ))}
+            </div>
+            {filteredSupps.map((sp, i) => {
+              const key = "sp" + i;
+              const isOpen = expanded[key];
+              return (
+                <div key={key} style={s.spC(sp)}>
+                  <div style={s.spT} onClick={() => toggle(key)}>
+                    <div style={{ fontSize: 22, flexShrink: 0 }}>{sp.emoji}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontWeight: 600, fontSize: 14, color: "#1a1a1a" }}>{sp.name}</span>
+                        {sp.priority && <span style={{ fontSize: 10, background: sp.accent, color: "#fff", padding: "2px 8px", borderRadius: 99, fontWeight: 700 }}>Priorität</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#888", marginTop: 1 }}>{sp.dose}</div>
+                    </div>
+                    <div style={s.spBdg(sp.accent)}>{sp.badge}</div>
+                    <div style={s.chv}>{isOpen ? "▲" : "▼"}</div>
+                  </div>
+                  {isOpen && (
+                    <div style={s.spB}>
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "#999", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 3 }}>Wann & Wie</div>
+                        <div style={{ fontSize: 13, color: "#555" }}>{sp.when}</div>
+                      </div>
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "#999", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 3 }}>Warum</div>
+                        <div style={{ fontSize: 13, color: "#555", lineHeight: 1.7 }}>{sp.why}</div>
+                      </div>
+                      <div style={{ marginTop: 10, background: sp.compatWarn ? "#FEF3E2" : "#F0FAF5", borderRadius: 8, padding: "8px 11px", fontSize: 12, color: sp.compatWarn ? "#A04000" : "#1A6B45" }}>
+                        {sp.compatWarn ? "⚠️ " : "✅ "}{sp.compat}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
