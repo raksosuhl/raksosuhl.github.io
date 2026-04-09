@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ernährungsplan – Oskar</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1108;
+    --surface: #181a0e;
+    --card: #1e2113;
+    --accent: #c8e63c;
+    --accent2: #e8b84b;
+    --accent3: #7ecf8e;
+    --text: #e8e6dc;
+    --muted: #8a8a78;
+    --border: #2e3020;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .hero {
+    padding: 3rem 2rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 900;
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 1rem;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .meta-pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 0.4rem 1rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .meta-pill strong { color: var(--accent2); }
+
+  /* Goals bar */
+  .goals {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .goal-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .goal-card .val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .goal-card .val.green { color: var(--accent3); }
+  .goal-card .val.gold { color: var(--accent2); }
+
+  .goal-card .lbl {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Tabs */
+  .tabs-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 0;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.45rem 1rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .tab:hover { border-color: var(--accent); color: var(--text); }
+  .tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 500; }
+
+  /* Day panel */
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 3rem;
+  }
+
+  .day-panel { display: none; }
+  .day-panel.active { display: block; }
+
+  .day-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .day-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .day-type {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+    border-radius: 100px;
+    padding: 0.2rem 0.7rem;
+  }
+
+  .day-type.rest { color: var(--muted); border-color: var(--muted); }
+
+  .meals {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .meal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 0.5rem 1rem;
+    align-items: start;
+  }
+
+  .meal-time {
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-weight: 500;
+    padding-top: 0.1rem;
+  }
+
+  .meal-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+
+  .meal-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .meal-kcal {
+    font-size: 0.8rem;
+    color: var(--accent2);
+    text-align: right;
+    white-space: nowrap;
+    padding-top: 0.1rem;
+  }
+
+  .meal-kcal small { display: block; color: var(--muted); font-size: 0.7rem; }
+
+  .day-totals {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+
+  .total-item { font-size: 0.82rem; color: var(--muted); }
+  .total-item strong { color: var(--text); font-size: 1rem; display: block; }
+
+  /* Knee section */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    margin-top: 2rem;
+    color: var(--accent3);
+  }
+
+  .tip-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .tip-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+  }
+
+  .tip-card .tip-icon { font-size: 1.4rem; margin-bottom: 0.5rem; }
+  .tip-card .tip-head { font-size: 0.9rem; font-weight: 500; color: var(--accent3); margin-bottom: 0.3rem; }
+  .tip-card .tip-body { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+
+  .note {
+    margin-top: 2rem;
+    padding: 1rem 1.25rem;
+    background: var(--card);
+    border-left: 3px solid var(--accent2);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  @media (max-width: 600px) {
+    .meal { grid-template-columns: 70px 1fr; }
+    .meal-kcal { grid-column: 2; }
+    .hero, .goals, .tabs-wrap, .content { padding-left: 1rem; padding-right: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-label">Personalisierter Ernährungsplan</div>
+  <h1>Kraft. Knorpel.<br><span>Kilometer.</span></h1>
+  <p style="color:var(--muted);font-size:0.9rem;max-width:560px">Muskelerhalt bei moderatem Kaloriendefizit – entzündungshemmend für das Knochenmarködem, carbgestützt für das Radfahren.</p>
+  <div class="hero-meta">
+    <div class="meta-pill">Gewicht <strong>88 kg → 85 kg</strong></div>
+    <div class="meta-pill">Protein <strong>~175 g/Tag</strong></div>
+    <div class="meta-pill">Kalorien <strong>~2.100–2.300 kcal</strong></div>
+    <div class="meta-pill">Rad <strong>4–6h/Woche</strong></div>
+  </div>
+</div>
+
+<div class="goals">
+  <div class="goal-card">
+    <div class="val">2.100</div>
+    <div class="lbl">kcal Ruhetag</div>
+  </div>
+  <div class="goal-card">
+    <div class="val gold">2.350</div>
+    <div class="lbl">kcal Trainingstag</div>
+  </div>
+  <div class="goal-card">
+    <div class="val green">175g</div>
+    <div class="lbl">Protein täglich</div>
+  </div>
+  <div class="goal-card">
+    <div class="val" style="color:var(--muted)">–350</div>
+    <div class="lbl">kcal Defizit</div>
+  </div>
+</div>
+
+<div class="tabs-wrap">
+  <div class="tabs" id="tabs">
+    <button class="tab active" onclick="showDay(0)">Mo</button>
+    <button class="tab" onclick="showDay(1)">Di</button>
+    <button class="tab" onclick="showDay(2)">Mi</button>
+    <button class="tab" onclick="showDay(3)">Do</button>
+    <button class="tab" onclick="showDay(4)">Fr</button>
+    <button class="tab" onclick="showDay(5)">Sa</button>
+    <button class="tab" onclick="showDay(6)">So</button>
+    <button class="tab" onclick="showDay(7)">Nährstoffe & Knie</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- MONTAG -->
+  <div class="day-panel active" id="day-0">
+    <div class="day-header">
+      <div class="day-name">Montag</div>
+      <div class="day-type">Trainingstag 🚴</div>
+    </div>
+    <div class="meals">
+      <div class="meal">
+        <div class="meal-time">07:00</div>
+        <div>
+          <div class="meal-title">Rühreier mit Haferbrei</div>
+          <div class="meal-desc">3 Vollei + 2 Eiweiß, verquirlt mit Kräutern · 60g Haferflocken mit Wasser/Milch, 1 EL Leinsamen, Heidelbeeren</div>
+        </div>
+        <div class="meal-kcal">~620 kcal<small>P 42g | C 55g | F 22g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">10:30</div>
+        <div>
+          <div class="meal-title">Quark-Snack</div>
+          <div class="meal-desc">250g Magerquark, 1 EL Hanfsamen, 1 kleine Banane</div>
+        </div>
+        <div class="meal-kcal">~310 kcal<small>P 35g | C 28g | F 5g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">13:00</div>
+        <div>
+          <div class="meal-title">Hähnchenbrustbowl</div>
+          <div class="meal-desc">200g Hähnchenbrust gegrillt · 150g Basmatireis (gegart) · Brokkoli, Paprika, Olivenöl, Kurkuma, Pfeffer</div>
+        </div>
+        <div class="meal-kcal">~610 kcal<small>P 55g | C 55g | F 14g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">15:30</div>
+        <div>
+          <div class="meal-title">Pre-Ride Snack</div>
+          <div class="meal-desc">2 Reiswaffeln · 1 EL Erdnussmus · 1 Apfel</div>
+        </div>
+        <div class="meal-kcal">~240 kcal<small>P 6g | C 38g | F 8g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">19:00</div>
+        <div>
+          <div class="meal-title">Post-Ride: Rinderhack-Gemüsepfanne</div>
+          <div class="meal-desc">180g Rinderhack (< 10% Fett) · Zucchini, Tomaten, Knoblauch · 120g Vollkornnudeln (gegart) · frisches Basilikum</div>
+        </div>
+        <div class="meal-kcal">~570 kcal<small>P 48g | C 48g | F 16g</small></div>
+      </div>
+    </div>
+    <div class="day-totals">
+      <div class="total-item"><strong>~2.350 kcal</strong>Gesamt</div>
+      <div class="total-item"><strong>~186g</strong>Protein</div>
+      <div class="total-item"><strong>~224g</strong>Kohlenhydrate</div>
+      <div class="total-item"><strong>~65g</strong>Fett</div>
+    </div>
+  </div>
+
+  <!-- DIENSTAG -->
+  <div class="day-panel" id="day-1">
+    <div class="day-header">
+      <div class="day-name">Dienstag</div>
+      <div class="day-type rest">Ruhetag 🧘</div>
+    </div>
+    <div class="meals">
+      <div class="meal">
+        <div class="meal-time">08:00</div>
+        <div>
+          <div class="meal-title">Protein-Omelett</div>
+          <div class="meal-desc">3 Vollei + 100g Hüttenkäse · Spinat, Zwiebeln, Paprika · 1 Scheibe Vollkornbrot</div>
+        </div>
+        <div class="meal-kcal">~480 kcal<small>P 45g | C 22g | F 22g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">12:00</div>
+        <div>
+          <div class="meal-title">Putenbrust mit Linsen-Gemüse</div>
+          <div class="meal-desc">200g Putenbrustschnitzel · 100g rote Linsen (gegart) · Möhren, Sellerie, Olivenöl, Ingwer, Kurkuma</div>
+        </div>
+        <div class="meal-kcal">~580 kcal<small>P 58g | C 40g | F 14g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">15:30</div>
+        <div>
+          <div class="meal-title">Skyr mit Nüssen</div>
+          <div class="meal-desc">200g Skyr natur · 20g Walnüsse · 1 TL Honig · Zimt</div>
+        </div>
+        <div class="meal-kcal">~310 kcal<small>P 28g | C 18g | F 13g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">19:00</div>
+        <div>
+          <div class="meal-title">Hähnchenbrust mit Süßkartoffel</div>
+          <div class="meal-desc">180g Hähnchenbrust · 200g Süßkartoffel gebacken · grüner Salat mit Olivenöl & Zitrone</div>
+        </div>
+        <div class="meal-kcal">~540 kcal<small>P 50g | C 48g | F 12g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">21:00</div>
+        <div>
+          <div class="meal-title">Abend-Protein</div>
+          <div class="meal-desc">200g Magerquark · 1 TL Leinsamenöl · Prise Zimt</div>
+        </div>
+        <div class="meal-kcal">~195 kcal<small>P 28g | C 8g | F 5g</small></div>
+      </div>
+    </div>
+    <div class="day-totals">
+      <div class="total-item"><strong>~2.105 kcal</strong>Gesamt</div>
+      <div class="total-item"><strong>~209g</strong>Protein</div>
+      <div class="total-item"><strong>~136g</strong>Kohlenhydrate</div>
+      <div class="total-item"><strong>~66g</strong>Fett</div>
+    </div>
+  </div>
+
+  <!-- MITTWOCH -->
+  <div class="day-panel" id="day-2">
+    <div class="day-header">
+      <div class="day-name">Mittwoch</div>
+      <div class="day-type">Trainingstag 🚴</div>
+    </div>
+    <div class="meals">
+      <div class="meal">
+        <div class="meal-time">07:00</div>
+        <div>
+          <div class="meal-title">Eier-Vollkorntoast</div>
+          <div class="meal-desc">3 Spiegeleier · 2 Scheiben Vollkornbrot · 1/2 Avocado · Tomaten, Pfeffer, Chiliflocken</div>
+        </div>
+        <div class="meal-kcal">~560 kcal<small>P 30g | C 36g | F 30g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">10:30</div>
+        <div>
+          <div class="meal-title">Protein-Shake + Obst</div>
+          <div class="meal-desc">30g Molkenprotein mit Wasser · 1 Banane · 1 EL Hanfsamen</div>
+        </div>
+        <div class="meal-kcal">~280 kcal<small>P 32g | C 30g | F 4g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">13:00</div>
+        <div>
+          <div class="meal-title">Rindfleisch-Gemüseeintopf</div>
+          <div class="meal-desc">180g Rindergulasch (mager) · Kartoffeln 150g · Karotten, Sellerie, Zwiebeln · Knochenbrühe, Rosmarin</div>
+        </div>
+        <div class="meal-kcal">~560 kcal<small>P 46g | C 44g | F 18g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">16:00</div>
+        <div>
+          <div class="meal-title">Pre-Ride: Reiswaffeln & Quark</div>
+          <div class="meal-desc">3 Reiswaffeln · 150g Magerquark · 1 TL Honig</div>
+        </div>
+        <div class="meal-kcal">~250 kcal<small>P 22g | C 32g | F 2g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">19:30</div>
+        <div>
+          <div class="meal-title">Hähnchen-Wokpfanne</div>
+          <div class="meal-desc">200g Hähnchenbrust · Pak Choi, Brokkoli, Pilze · 120g Jasminreis · Sojasoße, Ingwer, Sesamöl (1 TL)</div>
+        </div>
+        <div class="meal-kcal">~590 kcal<small>P 52g | C 60g | F 14g</small></div>
+      </div>
+    </div>
+    <div class="day-totals">
+      <div class="total-item"><strong>~2.240 kcal</strong>Gesamt</div>
+      <div class="total-item"><strong>~182g</strong>Protein</div>
+      <div class="total-item"><strong>~202g</strong>Kohlenhydrate</div>
+      <div class="total-item"><strong>~68g</strong>Fett</div>
+    </div>
+  </div>
+
+  <!-- DONNERSTAG -->
+  <div class="day-panel" id="day-3">
+    <div class="day-header">
+      <div class="day-name">Donnerstag</div>
+      <div class="day-type rest">Ruhetag 🧘</div>
+    </div>
+    <div class="meals">
+      <div class="meal">
+        <div class="meal-time">08:00</div>
+        <div>
+          <div class="meal-title">Scrambled Eggs & Lachs-Alternative</div>
+          <div class="meal-desc">4 Vollei weich gerührt · 80g Räucherlachs (optional) oder 100g Putenbrust-Aufschnitt · 1 Scheibe Vollkornbrot</div>
+        </div>
+        <div class="meal-kcal">~500 kcal<small>P 48g | C 18g | F 24g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">12:30</div>
+        <div>
+          <div class="meal-title">Quark-Bowl mit Beeren</div>
+          <div class="meal-desc">250g Magerquark · 30g Walnüsse · Blaubeeren, Erdbeeren · 1 EL Leinsamen · 1 TL Honig</div>
+        </div>
+        <div class="meal-kcal">~420 kcal<small>P 38g | C 24g | F 18g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">15:00</div>
+        <div>
+          <div class="meal-title">Skyr natur</div>
+          <div class="meal-desc">200g Skyr · 1 Apfel · Prise Zimt</div>
+        </div>
+        <div class="meal-kcal">~220 kcal<small>P 24g | C 28g | F 1g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">18:30</div>
+        <div>
+          <div class="meal-title">Puten-Bolognese mit Linsennudeln</div>
+          <div class="meal-desc">180g Putenhack · Linsenfarfalle 80g (trocken) · Tomatenpassata, Knoblauch, Zwiebeln, Olivenöl · Parmesan 20g</div>
+        </div>
+        <div class="meal-kcal">~600 kcal<small>P 58g | C 52g | F 16g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">21:00</div>
+        <div>
+          <div class="meal-title">Casein-Abend</div>
+          <div class="meal-desc">200g Magerquark · Prise Vanille · optional 1 TL Mandelmus</div>
+        </div>
+        <div class="meal-kcal">~195 kcal<small>P 28g | C 8g | F 4g</small></div>
+      </div>
+    </div>
+    <div class="day-totals">
+      <div class="total-item"><strong>~1.935 kcal</strong>Gesamt</div>
+      <div class="total-item"><strong>~196g</strong>Protein</div>
+      <div class="total-item"><strong>~130g</strong>Kohlenhydrate</div>
+      <div class="total-item"><strong>~63g</strong>Fett</div>
+    </div>
+  </div>
+
+  <!-- FREITAG -->
+  <div class="day-panel" id="day-4">
+    <div class="day-header">
+      <div class="day-name">Freitag</div>
+      <div class="day-type">Trainingstag 🚴</div>
+    </div>
+    <div class="meals">
+      <div class="meal">
+        <div class="meal-time">07:00</div>
+        <div>
+          <div class="meal-title">Overnight Oats mit Ei-Boost</div>
+          <div class="meal-desc">60g Haferflocken über Nacht in 200ml Milch · 2 hartgekochte Eier dazu · Banane · 1 EL Erdnussmus</div>
+        </div>
+        <div class="meal-kcal">~620 kcal<small>P 38g | C 62g | F 22g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">10:30</div>
+        <div>
+          <div class="meal-title">Hüttenkäse-Snack</div>
+          <div class="meal-desc">200g Hüttenkäse · 1 EL Hanfsamen · Gurkenscheiben · Pfeffer</div>
+        </div>
+        <div class="meal-kcal">~220 kcal<small>P 28g | C 6g | F 8g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">13:00</div>
+        <div>
+          <div class="meal-title">Hähnchen-Reis mit Gemüse</div>
+          <div class="meal-desc">200g Hähnchenbrust · 150g Basmatireis · Brokkoli, Paprika · Olivenöl, Kurkuma, Kreuzkümmel</div>
+        </div>
+        <div class="meal-kcal">~610 kcal<small>P 55g | C 58g | F 14g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">15:30</div>
+        <div>
+          <div class="meal-title">Pre-Ride Banane & Walnüsse</div>
+          <div class="meal-desc">1 Banane · 15g Walnüsse · 1 Reiswaffel</div>
+        </div>
+        <div class="meal-kcal">~220 kcal<small>P 4g | C 32g | F 8g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">19:30</div>
+        <div>
+          <div class="meal-title">Steak mit Ofenkartoffeln</div>
+          <div class="meal-desc">180g Rumpsteak (mager) · 200g Ofenkartoffeln · grüner Salat · Olivenöl, Balsamico, Senf · frische Kräuter</div>
+        </div>
+        <div class="meal-kcal">~600 kcal<small>P 52g | C 46g | F 18g</small></div>
+      </div>
+    </div>
+    <div class="day-totals">
+      <div class="total-item"><strong>~2.270 kcal</strong>Gesamt</div>
+      <div class="total-item"><strong>~177g</strong>Protein</div>
+      <div class="total-item"><strong>~204g</strong>Kohlenhydrate</div>
+      <div class="total-item"><strong>~70g</strong>Fett</div>
+    </div>
+  </div>
+
+  <!-- SAMSTAG -->
+  <div class="day-panel" id="day-5">
+    <div class="day-header">
+      <div class="day-name">Samstag</div>
+      <div class="day-type">Langer Ride 🚴‍♂️</div>
+    </div>
+    <div class="meals">
+      <div class="meal">
+        <div class="meal-time">07:30</div>
+        <div>
+          <div class="meal-title">Power-Frühstück</div>
+          <div class="meal-desc">3 Spiegeleier · 80g Haferbrei mit Milch · 1 Banane · 1 EL Leinsamen · 1 EL Erdnussmus</div>
+        </div>
+        <div class="meal-kcal">~680 kcal<small>P 40g | C 68g | F 26g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">Während Ride</div>
+        <div>
+          <div class="meal-title">Auf dem Rad (>90 min)</div>
+          <div class="meal-desc">1–2 Bananen · Reiswaffeln oder selbstgemachte Reiskuchen · Wasser + Elektrolyte (kein Zucker-Overload nötig)</div>
+        </div>
+        <div class="meal-kcal">~200–300 kcal<small>extra, nicht im Defizit zählen</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">Post-Ride</div>
+        <div>
+          <div class="meal-title">Recovery Shake</div>
+          <div class="meal-desc">30g Whey Protein · 250ml Milch · 1 Banane · 5g Kreatin optional</div>
+        </div>
+        <div class="meal-kcal">~380 kcal<small>P 42g | C 38g | F 7g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">14:00</div>
+        <div>
+          <div class="meal-title">Rindfleisch-Gemüse-Pfanne</div>
+          <div class="meal-desc">200g Rinderhack mager · Zucchini, Paprika, Tomaten · 150g Kartoffeln (gegart) · frische Kräuter</div>
+        </div>
+        <div class="meal-kcal">~560 kcal<small>P 50g | C 38g | F 20g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">19:00</div>
+        <div>
+          <div class="meal-title">Omelett mit Hüttenkäse</div>
+          <div class="meal-desc">3 Ei + 2 Eiweiß · 150g Hüttenkäse · Champignons, Lauch · 1 Scheibe Vollkornbrot</div>
+        </div>
+        <div class="meal-kcal">~480 kcal<small>P 56g | C 24g | F 18g</small></div>
+      </div>
+    </div>
+    <div class="day-totals">
+      <div class="total-item"><strong>~2.300 kcal</strong>Gesamt</div>
+      <div class="total-item"><strong>~188g</strong>Protein</div>
+      <div class="total-item"><strong>~168g</strong>Kohlenhydrate</div>
+      <div class="total-item"><strong>~71g</strong>Fett</div>
+    </div>
+  </div>
+
+  <!-- SONNTAG -->
+  <div class="day-panel" id="day-6">
+    <div class="day-header">
+      <div class="day-name">Sonntag</div>
+      <div class="day-type rest">Erholungstag 🌿</div>
+    </div>
+    <div class="meals">
+      <div class="meal">
+        <div class="meal-time">09:00</div>
+        <div>
+          <div class="meal-title">Genuss-Frühstück</div>
+          <div class="meal-desc">3 Rühreier mit Lachs (oder Putenbrust) · 2 Scheiben Vollkornbrot · Avocado · frische Tomaten, Basilikum</div>
+        </div>
+        <div class="meal-kcal">~580 kcal<small>P 48g | C 34g | F 26g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">13:00</div>
+        <div>
+          <div class="meal-title">Hähnchen-Gemüse-Curry</div>
+          <div class="meal-desc">200g Hähnchen · 150g Basmatireis · Kokosmilch light 100ml · Karotten, Erbsen, Zwiebel · Kurkuma, Ingwer, Koriander</div>
+        </div>
+        <div class="meal-kcal">~620 kcal<small>P 50g | C 62g | F 16g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">15:30</div>
+        <div>
+          <div class="meal-title">Knochen-Snack</div>
+          <div class="meal-desc">200g Magerquark · 1 TL Kollagenpulver (optional) · Beeren · 15g Mandeln</div>
+        </div>
+        <div class="meal-kcal">~290 kcal<small>P 34g | C 16g | F 10g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">19:00</div>
+        <div>
+          <div class="meal-title">Leichte Abendmahlzeit</div>
+          <div class="meal-desc">150g Putenbrust · großer Salat (Rucola, Gurke, Radieschen, Paprika) · 2 hartgekochte Eier · Olivenöl-Dressing</div>
+        </div>
+        <div class="meal-kcal">~420 kcal<small>P 52g | C 10g | F 18g</small></div>
+      </div>
+      <div class="meal">
+        <div class="meal-time">21:00</div>
+        <div>
+          <div class="meal-title">Protein-Abend</div>
+          <div class="meal-desc">200g Magerquark · Prise Zimt · 1 TL Leinsamenöl</div>
+        </div>
+        <div class="meal-kcal">~195 kcal<small>P 28g | C 8g | F 5g</small></div>
+      </div>
+    </div>
+    <div class="day-totals">
+      <div class="total-item"><strong>~2.105 kcal</strong>Gesamt</div>
+      <div class="total-item"><strong>~212g</strong>Protein</div>
+      <div class="total-item"><strong>~130g</strong>Kohlenhydrate</div>
+      <div class="total-item"><strong>~75g</strong>Fett</div>
+    </div>
+  </div>
+
+  <!-- NÄHRSTOFFE & KNIE -->
+  <div class="day-panel" id="day-7">
+    <div class="day-header">
+      <div class="day-name">Knie-Protokoll</div>
+    </div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem">Knochenmarködem erfordert mehr als nur Protein – diese Nährstoffe beschleunigen nachweislich die Heilung von Knochen und Knorpel.</p>
+
+    <div class="section-title">Schlüsselnährstoffe für die Knieheilung</div>
+    <div class="tip-grid">
+      <div class="tip-card">
+        <div class="tip-icon">🥚</div>
+        <div class="tip-head">Kollagen-Vorstufen</div>
+        <div class="tip-body">Eier, Rinderknochen-Brühe, Hähnchenhaut (gelegentlich), Gelatine. Vitamin C dazu (Paprika, Zitrone) – steigert Kollagensynthese um Faktor 3.</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon">☀️</div>
+        <div class="tip-head">Vitamin D</div>
+        <div class="tip-body">Essenziell für Knochenmark. Ziel: 2.000–4.000 IU/Tag als Supplement (besonders Oktober–April in München). Bluttest empfehlenswert.</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon">🥦</div>
+        <div class="tip-head">Vitamin K2</div>
+        <div class="tip-body">Leitet Kalzium in die Knochen. Quellen: Eier (Dotter), fermentierter Käse, Natto. Als MK-7 Supplement (100 µg/Tag) sehr wirksam.</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon">🫐</div>
+        <div class="tip-head">Antioxidantien (entzündungshemmend)</div>
+        <div class="tip-body">Heidelbeeren, Kirschen, Brokkoli, Kurkuma + Pfeffer täglich. Senken systemische Entzündung, die ein Ödem unterhält.</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon">🫒</div>
+        <div class="tip-head">Omega-3 (auch ohne Fisch)</div>
+        <div class="tip-body">Leinsamen, Walnüsse, Hanfsamen (ALA). Für optimale Wirkung: Algenöl-Supplement (EPA/DHA direkt, ~1g/Tag). Starke Evidenz für Ödem-Reduktion.</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon">🦴</div>
+        <div class="tip-head">Calcium + Magnesium</div>
+        <div class="tip-body">Magerquark, Skyr, Käse für Calcium. Magnesium: Kürbiskerne, dunkle Schokolade, Haferflocken. Beide essenziell für Knochenregeneration.</div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:2rem">Empfohlene Supplemente</div>
+    <div class="tip-grid">
+      <div class="tip-card">
+        <div class="tip-head">Vitamin D3 + K2</div>
+        <div class="tip-body">Kombipräparat · täglich morgens zum Frühstück · z.B. 3.000 IU D3 + 100 µg K2 MK-7</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-head">Algenöl (Omega-3)</div>
+        <div class="tip-body">500–1000 mg EPA+DHA · pflanzliche Alternative zu Fischöl · identische Wirkung</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-head">Kollagenpeptide</div>
+        <div class="tip-body">10g/Tag · mit Vitamin C · 30–60 min vor Sport · Studien zeigen Verbesserung bei Knorpel/Gelenken</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-head">Kreatin</div>
+        <div class="tip-body">3–5g/Tag · Muskelerhalt besonders bei eingeschränktem Training · günstig, beste Evidenz</div>
+      </div>
+    </div>
+
+    <div class="note">
+      ⚠️ <strong>Wichtiger Hinweis:</strong> Dieser Plan ersetzt keine ärztliche Behandlung. Bei einem Knochenmarködem ist die Rücksprache mit Orthopäde und ggf. Ernährungsmediziner wichtig. Die Schmerz- und Belastungstoleranz beim Radfahren individuell mit dem behandelnden Arzt klären. Kreatin und Vitamin D vorher mit dem Arzt besprechen, falls Medikamente eingenommen werden.
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showDay(index) {
+  document.querySelectorAll('.day-panel').forEach((p, i) => {
+    p.classList.toggle('active', i === index);
+  });
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', i === index);
+  });
+}
+</script>
+</body>
+</html>
