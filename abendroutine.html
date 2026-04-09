@@ -24,7 +24,12 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState } = React;
+const { useState, useEffect } = React;
+
+function isAutoTime() {
+  const h = new Date().getHours();
+  return h >= 20 || h < 7;
+}
 
 function timeToMins(str){const[h,m]=str.split(":").map(Number);return h*60+m;}
 function minsToTime(mins){const t=((mins%1440)+1440)%1440;return`${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;}
@@ -227,7 +232,21 @@ function DarkToggle({dark, onToggle}) {
 
 /* ── APP ─────────────────────────────────────────────────────────── */
 function App() {
-  const [dark,       setDark]       = useState(false);
+  const [manualDark,  setManualDark]  = useState(null);        // null = follow auto
+  const [autoTime,    setAutoTime]    = useState(isAutoTime()); // rechecked every 30s
+  const dark = manualDark !== null ? manualDark : autoTime;
+
+  // Auto dark: on 20:00–07:00. Crossing a boundary resets any manual override.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const next = isAutoTime();
+      setAutoTime(prev => {
+        if (prev !== next) setManualDark(null); // boundary crossed → back to auto
+        return next;
+      });
+    }, 30000);
+    return () => clearInterval(id);
+  }, []);
   const [mode,       setMode]       = useState("bed");
   const [bedTime,    setBedTime]    = useState("22:30");
   const [wakeTime,   setWakeTime]   = useState("08:00");
@@ -279,8 +298,11 @@ function App() {
 
               {/* Dark mode toggle */}
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:11,color:T.sub,fontWeight:600,letterSpacing:"0.04em"}}>{dark?"DARK":"LIGHT"}</span>
-                <DarkToggle dark={dark} onToggle={()=>setDark(d=>!d)} />
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:11,color:T.sub,fontWeight:600,letterSpacing:"0.04em"}}>{dark?"DARK":"LIGHT"}</div>
+                  <div style={{fontSize:9,color:T.muted,marginTop:1}}>{manualDark===null?"auto":"manuell"}</div>
+                </div>
+                <DarkToggle dark={dark} onToggle={()=>setManualDark(!dark)} />
               </div>
 
               {/* Time control box */}
