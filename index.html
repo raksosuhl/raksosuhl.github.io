@@ -30,6 +30,29 @@
       --shadow:    0 2px 16px rgba(0,0,0,0.06);
     }
 
+    body.dark {
+      --bg:        #1E1E1E;
+      --surface:   #2A2A2A;
+      --border:    #3A3A3A;
+      --text:      #ECECEC;
+      --muted:     #787878;
+      --accent:    #ECECEC;
+      --accent-fg: #1E1E1E;
+      --success:   #4CAF7D;
+      --success-bg:#1A3D2B;
+      --shadow:    0 2px 16px rgba(0,0,0,0.3);
+    }
+
+    /* dark mode specific overrides */
+    body.dark .currency-symbol { background: var(--bg); }
+    body.dark .amount-display  { background: var(--bg); }
+    body.dark .amount-display .currency-symbol { background: var(--bg); }
+    body.dark #beschreibung    { background: var(--surface); }
+    body.dark .quick-btn       { color: var(--text); }
+    body.dark .mode-toggle     { color: var(--muted); }
+    body.dark .cat-btn.active .icon { filter: brightness(0.1); }
+    body.dark .submit-btn      { background: var(--accent); color: var(--accent-fg); }
+
     html, body {
       height: 100%;
       background: var(--bg);
@@ -272,6 +295,39 @@
     }
     .date-chip span { font-family: 'DM Mono', monospace; }
 
+    /* ── Dark mode toggle ── */
+    .topbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: -16px;
+    }
+    .theme-toggle {
+      width: 52px; height: 28px;
+      background: var(--border);
+      border: none; border-radius: 100px;
+      cursor: pointer; position: relative;
+      transition: background 0.35s ease;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+    }
+    .theme-toggle::after {
+      content: '☀️';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; line-height: 22px; text-align: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.35s;
+    }
+    body.dark .theme-toggle { background: #4A4A4A; }
+    body.dark .theme-toggle::after {
+      content: '🌙';
+      transform: translateX(24px);
+    }
+
     @media (max-width: 380px) {
       .cat-grid { grid-template-columns: repeat(3, 1fr); }
       .cat-btn { font-size: 12px; }
@@ -282,6 +338,9 @@
 <body>
 
 <div class="wrapper">
+  <div class="topbar">
+    <button class="theme-toggle" id="theme-toggle" aria-label="Dark mode toggle"></button>
+  </div>
   <div class="card">
 
     <!-- Betrag -->
@@ -399,6 +458,45 @@
 <div class="toast" id="toast">✓ Ausgabe eingetragen</div>
 
 <script>
+  // ── Dark Mode Toggle
+  const themeToggle = document.getElementById('theme-toggle');
+
+  function shouldBeDark() {
+    const h = new Date().getHours();
+    return h >= 20 || h < 7;
+  }
+
+  // Apply saved preference, or fall back to time-based
+  const saved = localStorage.getItem('theme');
+  const savedTime = parseInt(localStorage.getItem('themeSetAt') || '0');
+  const now = Date.now();
+  const oneDay = 24 * 60 * 60 * 1000;
+
+  // If saved preference is older than 24h, ignore it and use time-based
+  if (saved && (now - savedTime) < oneDay) {
+    if (saved === 'dark') document.body.classList.add('dark');
+  } else {
+    if (shouldBeDark()) document.body.classList.add('dark');
+    localStorage.removeItem('theme');
+  }
+
+  // Manual toggle
+  themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+    localStorage.setItem('themeSetAt', Date.now().toString());
+  });
+
+  // Auto-switch check every minute
+  setInterval(() => {
+    const manualSaved = localStorage.getItem('theme');
+    const setAt = parseInt(localStorage.getItem('themeSetAt') || '0');
+    // Only auto-switch if no recent manual override (older than 24h)
+    if (!manualSaved || (Date.now() - setAt) >= oneDay) {
+      if (shouldBeDark()) document.body.classList.add('dark');
+      else document.body.classList.remove('dark');
+    }
+  }, 60 * 1000);
   // ── Suggestions config (label + icon)
   const SUGGESTIONS = {
     'Essen':     null,
