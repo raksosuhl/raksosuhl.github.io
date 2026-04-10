@@ -312,7 +312,8 @@
     /* ══ MOBILE OVERRIDES ══ */
     @media (max-width: 768px) {
       .page { padding: 16px 16px env(safe-area-inset-bottom, 32px); gap: 14px; }
-      .columns { display: flex; flex-direction: column; gap: 14px; }
+      .columns { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+      .columns > * { width: 100%; min-width: 0; }
       .weather-col { display: none; }
       .w-mobile-strip { display: flex; }
       .clock { font-size: 22px; }
