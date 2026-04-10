@@ -290,8 +290,105 @@
     .w-mobile-hourly-icon { font-size: 14px; }
     .w-mobile-hourly-temp { font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace; }
 
-    /* skeleton */
-    .skeleton {
+    /* ══ LIGHT CONTROL ══ */
+    .light-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 20px 22px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .light-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .light-card-title {
+      font-size: 11px; font-weight: 500; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .light-active-label {
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      font-family: 'DM Mono', monospace; transition: color 0.3s;
+    }
+    .light-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    }
+    .light-btn {
+      position: relative; border: 1.5px solid var(--border);
+      border-radius: 14px; background: var(--surface);
+      padding: 14px 8px 12px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      transition: border-color 0.25s, background 0.25s, transform 0.15s, box-shadow 0.25s;
+      -webkit-tap-highlight-color: transparent; overflow: hidden;
+    }
+    .light-btn::before {
+      content: ''; position: absolute; inset: 0; opacity: 0;
+      border-radius: 12px; transition: opacity 0.3s;
+    }
+    .light-btn:hover { transform: translateY(-2px); }
+    .light-btn:active { transform: scale(0.96); }
+
+    /* glow ring on active */
+    .light-btn.active { border-color: transparent; }
+    .light-btn.active::before { opacity: 1; }
+
+    /* per-scene colors */
+    .light-btn[data-scene="normal"].active {
+      background: linear-gradient(135deg, #FFF9EE 0%, #FDEFC3 100%);
+      box-shadow: 0 4px 20px rgba(253,210,70,0.35);
+    }
+    .light-btn[data-scene="normal"].active::before {
+      background: linear-gradient(135deg, rgba(253,210,70,0.15), rgba(253,180,20,0.08));
+    }
+    .light-btn[data-scene="abend"].active {
+      background: linear-gradient(135deg, #FFF4EC 0%, #FFD4A8 100%);
+      box-shadow: 0 4px 20px rgba(255,140,50,0.35);
+    }
+    .light-btn[data-scene="abend"].active::before {
+      background: linear-gradient(135deg, rgba(255,140,50,0.15), rgba(220,90,20,0.08));
+    }
+    .light-btn[data-scene="rot"].active {
+      background: linear-gradient(135deg, #FFF0F0 0%, #FFBCBC 100%);
+      box-shadow: 0 4px 20px rgba(220,60,60,0.35);
+    }
+    .light-btn[data-scene="rot"].active::before {
+      background: linear-gradient(135deg, rgba(220,60,60,0.18), rgba(180,20,20,0.08));
+    }
+    .light-btn[data-scene="aus"].active {
+      background: linear-gradient(135deg, #F0F0F0 0%, #DCDCDC 100%);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    body.dark .light-btn[data-scene="normal"].active  { background: linear-gradient(135deg,#3A3010,#2A2008); box-shadow:0 4px 20px rgba(253,210,70,0.2); }
+    body.dark .light-btn[data-scene="abend"].active   { background: linear-gradient(135deg,#3A2010,#2A1408); box-shadow:0 4px 20px rgba(255,140,50,0.2); }
+    body.dark .light-btn[data-scene="rot"].active     { background: linear-gradient(135deg,#3A1010,#2A0808); box-shadow:0 4px 20px rgba(220,60,60,0.2); }
+    body.dark .light-btn[data-scene="aus"].active     { background: linear-gradient(135deg,#2A2A2A,#222222); }
+
+    .light-btn-icon {
+      font-size: 22px; line-height: 1;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), filter 0.3s;
+    }
+    .light-btn.active .light-btn-icon { transform: scale(1.15); }
+    .light-btn[data-scene="normal"].active .light-btn-icon { filter: drop-shadow(0 0 6px rgba(253,210,70,0.8)); }
+    .light-btn[data-scene="abend"].active  .light-btn-icon { filter: drop-shadow(0 0 6px rgba(255,140,50,0.8)); }
+    .light-btn[data-scene="rot"].active    .light-btn-icon { filter: drop-shadow(0 0 6px rgba(220,60,60,0.9)); }
+
+    .light-btn-label {
+      font-size: 11px; font-weight: 500; color: var(--muted);
+      transition: color 0.25s; letter-spacing: 0.02em;
+    }
+    .light-btn.active .light-btn-label { color: var(--text); font-weight: 600; }
+
+    /* pulse ring animation on activation */
+    @keyframes lightPulse {
+      0%   { box-shadow: 0 0 0 0px currentColor; opacity: 0.6; }
+      100% { box-shadow: 0 0 0 10px currentColor; opacity: 0; }
+    }
+    .light-btn.just-activated::after {
+      content: ''; position: absolute; inset: -2px; border-radius: 15px;
+      animation: lightPulse 0.5s ease-out forwards;
+    }
+    .light-btn[data-scene="normal"].just-activated::after { color: rgba(253,210,70,0.5); }
+    .light-btn[data-scene="abend"].just-activated::after  { color: rgba(255,140,50,0.5); }
+    .light-btn[data-scene="rot"].just-activated::after    { color: rgba(220,60,60,0.5); }
+    .light-btn[data-scene="aus"].just-activated::after    { color: rgba(150,150,150,0.3); }
       background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%);
       background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px;
     }
@@ -421,7 +518,32 @@
         <a href="abendroutine.html" class="nav-btn">🌙 Abendroutine</a>
         <a href="ernaehrungsplan.html" class="nav-btn">🥗 Ernährungsplan</a>
       </div>
-    </div>
+
+      <!-- Light control -->
+      <div class="light-card">
+        <div class="light-card-header">
+          <div class="light-card-title">💡 Zimmer</div>
+          <div class="light-active-label" id="light-label">—</div>
+        </div>
+        <div class="light-grid">
+          <button class="light-btn" data-scene="normal">
+            <span class="light-btn-icon">☀️</span>
+            <span class="light-btn-label">Normal</span>
+          </button>
+          <button class="light-btn" data-scene="abend">
+            <span class="light-btn-icon">🌅</span>
+            <span class="light-btn-label">Abend</span>
+          </button>
+          <button class="light-btn" data-scene="rot">
+            <span class="light-btn-icon">🔴</span>
+            <span class="light-btn-label">Rot</span>
+          </button>
+          <button class="light-btn" data-scene="aus">
+            <span class="light-btn-icon">🌑</span>
+            <span class="light-btn-label">Aus</span>
+          </button>
+        </div>
+      </div>
 
   </div>
 
@@ -785,6 +907,35 @@ document.getElementById('submit-btn').addEventListener('click', () => {
     selectedCat=null; selectedChip=null;
     showToast();
   }, 300);
+});
+
+// ── Light Control
+const lightBtns = document.querySelectorAll('.light-btn');
+const lightLabel = document.getElementById('light-label');
+
+const LIGHT_SCENES = {
+  normal: { label: 'Normal',  webhook: null },
+  abend:  { label: 'Abend',   webhook: null },
+  rot:    { label: 'Rot',     webhook: null },
+  aus:    { label: 'Aus',     webhook: 'http://192.168.2.113:63743/?id=7617f17e-c0e3-43eb-b3f1-eaf00f711f4e&command=On&value=true' },
+};
+
+let activeScene = null;
+
+lightBtns.forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const scene = btn.dataset.scene;
+    if (activeScene === scene) return;
+    lightBtns.forEach(b => b.classList.remove('active', 'just-activated'));
+    btn.classList.add('active', 'just-activated');
+    setTimeout(() => btn.classList.remove('just-activated'), 600);
+    activeScene = scene;
+    const info = LIGHT_SCENES[scene];
+    if (lightLabel) lightLabel.textContent = info.label;
+    if (info.webhook) {
+      try { await fetch(info.webhook, { mode: 'no-cors' }); } catch(e) {}
+    }
+  });
 });
 
 function showToast() {
