@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <title>🚴 Carbs Rechner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow:wght@300;400;500;600;700;900&family=Barlow+Condensed:wght@400;600;700;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0F1014;
+      --surface:  #1A1B21;
+      --surface2: #22232C;
+      --border:   #2E2F3A;
+      --text:     #F0EFE8;
+      --muted:    #686878;
+      --accent:   #E8FF3C;
+      --accent2:  #FF6B2C;
+      --blue:     #3C8EFF;
+      --radius:   14px;
+    }
+
+    body.light {
+      --bg:       #F4F3EF;
+      --surface:  #FFFFFF;
+      --surface2: #EDEDEA;
+      --border:   #DDDBD5;
+      --text:     #18181A;
+      --muted:    #888880;
+      --accent:   #6A8F00;
+      --accent2:  #CC4400;
+      --blue:     #1A6FD4;
+    }
+
+    body.light .results-card {
+      background: linear-gradient(135deg, #F8FAEA 0%, #F0F5DC 100%);
+      border-color: rgba(106,143,0,0.25);
+    }
+    body.light .results-card::before {
+      background: radial-gradient(circle, rgba(106,143,0,0.08) 0%, transparent 70%);
+    }
+    body.light .results-title { color: rgba(106,143,0,0.7); }
+    body.light .results-title::after { background: rgba(106,143,0,0.2); }
+    body.light .elyte-item { background: rgba(26,111,212,0.05); border-color: rgba(26,111,212,0.2); }
+    body.light .breakdown { background: rgba(0,0,0,0.03); }
+    body.light input[type=range]::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(106,143,0,0.15); }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      font-family: 'Barlow', sans-serif;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      transition: background 0.35s, color 0.35s;
+    }
+
+    /* ── LAYOUT ── */
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .header-left h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      color: var(--text);
+    }
+    .header-left h1 span { color: var(--accent); }
+    .header-left p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+      font-weight: 400;
+    }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 9px;
+      border: 1.5px solid var(--border); background: transparent;
+      font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 500;
+      color: var(--muted); text-decoration: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted);
+      display: flex; align-items: center; gap: 7px;
+    }
+    .card-title::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── TWO COLUMN ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* ── SLIDER BLOCK ── */
+    .slider-block { display: flex; flex-direction: column; gap: 10px; }
+    .slider-label-row {
+      display: flex; align-items: baseline; justify-content: space-between;
+    }
+    .slider-label {
+      font-size: 13px; font-weight: 500; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .slider-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 28px; font-weight: 500;
+      color: var(--accent);
+      transition: color 0.2s;
+    }
+    .slider-value span { font-size: 13px; color: var(--muted); }
+    input[type=range] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 6px; border-radius: 99px; outline: none; cursor: pointer;
+      background: var(--border);
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(232,255,60,0.15);
+      cursor: pointer;
+      transition: box-shadow 0.15s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      box-shadow: 0 0 0 7px rgba(232,255,60,0.2);
+    }
+
+    /* ── DURATION PICKER ── */
+    .duration-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .dur-btn {
+      padding: 8px 16px; border-radius: 9px;
+      border: 1.5px solid var(--border); background: transparent;
+      font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 600;
+      color: var(--muted); cursor: pointer;
+      transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+    }
+    .dur-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .dur-btn.active { border-color: var(--accent); background: rgba(232,255,60,0.08); color: var(--accent); }
+    .dur-custom {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: 9px; padding: 4px 12px;
+    }
+    .dur-custom input {
+      width: 48px; background: transparent; border: none; outline: none;
+      font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500;
+      color: var(--text); text-align: center;
+    }
+    .dur-custom input::-webkit-outer-spin-button,
+    .dur-custom input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .dur-custom span { font-size: 12px; color: var(--muted); }
+
+    /* ── WEATHER SELECT ── */
+    select {
+      appearance: none; -webkit-appearance: none;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 9px; padding: 10px 36px 10px 14px;
+      font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 500;
+      color: var(--text); cursor: pointer; outline: none;
+      width: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23686878' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      transition: border-color 0.15s;
+    }
+    select:focus { border-color: var(--blue); }
+
+    /* ── MIX CHECKBOXES ── */
+    .mix-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mix-card {
+      position: relative;
+      border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .mix-card:hover { border-color: var(--muted); }
+    .mix-card.checked { border-color: var(--blue); background: rgba(60,142,255,0.06); }
+    .mix-card input[type=checkbox] { display: none; }
+    .mix-card-check {
+      position: absolute; top: 12px; right: 12px;
+      width: 18px; height: 18px; border-radius: 5px;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; transition: all 0.15s;
+    }
+    .mix-card.checked .mix-card-check {
+      background: var(--blue); border-color: var(--blue); color: #fff;
+    }
+    .mix-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px; font-weight: 700; letter-spacing: 0.03em;
+      color: var(--text); margin-bottom: 6px;
+    }
+    .mix-stats { display: flex; flex-direction: column; gap: 2px; }
+    .mix-stat { font-size: 11px; color: var(--muted); }
+    .mix-stat strong { color: var(--text); font-weight: 600; }
+    .mix-portion {
+      margin-top: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .mix-portion label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .mix-portion input[type=number] {
+      width: 52px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 4px 6px; font-family: 'DM Mono', monospace;
+      font-size: 13px; color: var(--text); outline: none; text-align: center;
+    }
+    .mix-portion input[type=number]::-webkit-outer-spin-button,
+    .mix-portion input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .mix-portion span { font-size: 11px; color: var(--muted); }
+
+    /* ── RESULTS ── */
+    .results-card {
+      background: linear-gradient(135deg, #1A1E14 0%, #141814 100%);
+      border: 1px solid rgba(232,255,60,0.2);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .results-card::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(232,255,60,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .results-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(232,255,60,0.6);
+      display: flex; align-items: center; gap: 7px;
+    }
+    .results-title::after { content: ''; flex: 1; height: 1px; background: rgba(232,255,60,0.15); }
+
+    .results-main {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .result-item { display: flex; flex-direction: column; gap: 4px; }
+    .result-label {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted);
+    }
+    .result-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 32px; font-weight: 500;
+      color: var(--accent);
+      line-height: 1;
+      transition: all 0.3s;
+    }
+    .result-val span { font-size: 14px; color: var(--muted); font-weight: 400; }
+    .result-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* breakdown */
+    .breakdown {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .breakdown-title {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 2px;
+    }
+    .breakdown-row {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .breakdown-name {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 500; color: var(--text);
+    }
+    .breakdown-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .breakdown-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px; font-weight: 500; color: var(--text);
+    }
+    .breakdown-sub { font-size: 11px; color: var(--muted); margin-left: 16px; }
+
+    /* electrolyte result */
+    .elyte-result {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+    }
+    .elyte-item {
+      background: rgba(60,142,255,0.06);
+      border: 1px solid rgba(60,142,255,0.2);
+      border-radius: 10px; padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .elyte-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--blue); }
+    .elyte-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 26px; font-weight: 500; color: var(--text); line-height: 1;
+    }
+    .elyte-val span { font-size: 12px; color: var(--muted); }
+    .elyte-sub { font-size: 11px; color: var(--muted); }
+
+    /* warning pill */
+    .warn-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 8px;
+      background: rgba(255,107,44,0.1);
+      border: 1px solid rgba(255,107,44,0.25);
+      font-size: 12px; font-weight: 500; color: var(--accent2);
+    }
+
+    /* calorie summary */
+    .cal-bar {
+      display: flex; height: 8px; border-radius: 99px;
+      overflow: hidden; gap: 2px; margin-top: 4px;
+    }
+    .cal-seg { border-radius: 99px; transition: flex 0.4s ease; }
+
+    /* ── THEME TOGGLE ── */
+    .theme-toggle {
+      width: 52px; height: 28px;
+      background: #2E2F3A;
+      border: none; border-radius: 100px; cursor: pointer; position: relative;
+      transition: background 0.35s; -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+    }
+    .theme-toggle::after {
+      content: '🌙'; position: absolute; top: 3px; left: 3px;
+      width: 22px; height: 22px; border-radius: 50%; background: #1A1B21;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; line-height: 22px; text-align: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    body.light .theme-toggle { background: #D8D5CC; }
+    body.light .theme-toggle::after { content: '☀️'; background: #fff; transform: translateX(24px); }
+
+    /* ── ANIMATE IN ── */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .card, .results-card {
+      animation: fadeUp 0.35s ease both;
+    }
+    .card:nth-child(2) { animation-delay: 0.05s; }
+    .card:nth-child(3) { animation-delay: 0.10s; }
+    .results-card      { animation-delay: 0.15s; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 600px) {
+      .page { padding: 20px 14px 60px; gap: 16px; }
+      .header-left h1 { font-size: 32px; }
+      .two-col { grid-template-columns: 1fr; }
+      .results-main { grid-template-columns: repeat(2, 1fr); }
+      .result-val { font-size: 26px; }
+      .elyte-result { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>🚴 CARBS<span>RECHNER</span></h1>
+      <p>Fahrrad-Ernährung · 88 kg · optimiert für dein Radon R105</p>
+    </div>
+    <a href="index.html" class="back-btn">← Zurück</a>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Dark/Light Mode"></button>
+  </div>
+
+  <!-- Card 1: Fahrt -->
+  <div class="card">
+    <div class="card-title">🕐 Fahrtparameter</div>
+
+    <div class="two-col">
+      <!-- Dauer -->
+      <div class="slider-block">
+        <div class="slider-label-row">
+          <div class="slider-label">Fahrtdauer</div>
+          <div class="slider-value" id="dur-display">2<span>h 00m</span></div>
+        </div>
+        <div class="duration-row">
+          <button class="dur-btn" data-min="60">1h</button>
+          <button class="dur-btn" data-min="120">2h</button>
+          <button class="dur-btn active" data-min="180">3h</button>
+          <button class="dur-btn" data-min="240">4h</button>
+          <button class="dur-btn" data-min="300">5h</button>
+          <button class="dur-btn" data-min="360">6h</button>
+        </div>
+      </div>
+
+      <!-- Wetter -->
+      <div class="slider-block">
+        <div class="slider-label-row">
+          <div class="slider-label">Wetter / Temperatur</div>
+        </div>
+        <select id="weather-sel">
+          <option value="cold">🥶 Kühl · unter 15°C</option>
+          <option value="mild" selected>😊 Mild · 15–25°C</option>
+          <option value="warm">☀️ Warm · 25–32°C</option>
+          <option value="hot">🔥 Heiß · über 32°C</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Carbs/h Slider -->
+    <div class="slider-block">
+      <div class="slider-label-row">
+        <div class="slider-label">Carbs pro Stunde</div>
+        <div class="slider-value" id="carbs-display">80<span>g/h</span></div>
+      </div>
+      <input type="range" id="carbs-slider" min="50" max="130" step="10" value="80"/>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:-4px">
+        <span>50g</span><span>70g</span><span>90g</span><span>110g</span><span>130g</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 2: Zusatz-Mixes -->
+  <div class="card">
+    <div class="card-title">🧪 Fertige Carb-Mixes (optional, zusätzlich)</div>
+    <div class="mix-row">
+
+      <!-- Bulk -->
+      <label class="mix-card" id="bulk-card">
+        <input type="checkbox" id="bulk-check"/>
+        <div class="mix-card-check" id="bulk-checkmark">✓</div>
+        <div class="mix-name">💙 BULK Hydration</div>
+        <div class="mix-stats">
+          <div class="mix-stat">Carbs: <strong>35g</strong> pro 40g Portion</div>
+          <div class="mix-stat">Protein: <strong>2g</strong> · Salz: <strong>0,66g</strong></div>
+          <div class="mix-stat">Kalorien: <strong>~149 kcal</strong> / Portion</div>
+          <div class="mix-stat" style="color:#3C8EFF;margin-top:4px">Elektrolyte ✓ · BCAA ✓</div>
+        </div>
+        <div class="mix-portion">
+          <label>Portionen:</label>
+          <input type="number" id="bulk-portions" min="1" max="5" value="1" onclick="event.stopPropagation()"/>
+          <span>× 40g</span>
+        </div>
+      </label>
+
+      <!-- Decathlon -->
+      <label class="mix-card" id="dec-card">
+        <input type="checkbox" id="dec-check"/>
+        <div class="mix-card-check" id="dec-checkmark">✓</div>
+        <div class="mix-name">💛 Decathlon ISO</div>
+        <div class="mix-stats">
+          <div class="mix-stat">Carbs: <strong>34g</strong> pro 38g Portion</div>
+          <div class="mix-stat">Natrium: <strong>285mg</strong> / 38g</div>
+          <div class="mix-stat">Kalorien: <strong>~135 kcal</strong> / Portion</div>
+          <div class="mix-stat" style="color:#D4A017;margin-top:4px">Vitamine B1, B2, B6, C ✓</div>
+        </div>
+        <div class="mix-portion">
+          <label>Portionen:</label>
+          <input type="number" id="dec-portions" min="1" max="5" value="1" onclick="event.stopPropagation()"/>
+          <span>× 38g</span>
+        </div>
+      </label>
+
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-card" id="results">
+    <div class="results-title">⚡ Dein Rucksack</div>
+
+    <!-- Main numbers -->
+    <div class="results-main">
+      <div class="result-item">
+        <div class="result-label">Maltodextrin</div>
+        <div class="result-val" id="r-malto">—<span>g</span></div>
+        <div class="result-sub" id="r-malto-sub"></div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Dextrose</div>
+        <div class="result-val" id="r-dextro">—<span>g</span></div>
+        <div class="result-sub" id="r-dextro-sub"></div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Kalorien gesamt</div>
+        <div class="result-val" id="r-kcal" style="color:var(--accent2)">—<span>kcal</span></div>
+        <div class="result-sub" id="r-kcal-sub"></div>
+      </div>
+    </div>
+
+    <!-- Breakdown -->
+    <div class="breakdown" id="breakdown-block">
+      <div class="breakdown-title">Carb-Aufschlüsselung</div>
+      <div id="breakdown-rows"></div>
+      <div class="cal-bar" id="cal-bar"></div>
+    </div>
+
+    <!-- Elektrolyte -->
+    <div>
+      <div class="results-title" style="margin-bottom:12px">💊 Elektrolyt-Kapseln (SaltStick)</div>
+      <div class="elyte-result">
+        <div class="elyte-item">
+          <div class="elyte-label">Kapseln</div>
+          <div class="elyte-val" id="r-caps">—<span> Kapseln</span></div>
+          <div class="elyte-sub" id="r-caps-sub"></div>
+        </div>
+        <div class="elyte-item">
+          <div class="elyte-label">Natrium</div>
+          <div class="elyte-val" id="r-sodium">—<span>mg</span></div>
+          <div class="elyte-sub">Ziel: pro Stunde</div>
+        </div>
+      </div>
+      <div style="margin-top:10px" id="elyte-warn"></div>
+    </div>
+
+    <!-- Water tip -->
+    <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:12px" id="r-water"></div>
+  </div>
+
+</div>
+
+<script>
+// ── State
+let durMins   = 180;
+let carbsPerH = 80;
+let useBulk   = false;
+let useDec    = false;
+
+// ── Nutrition constants
+const MALTO_RATIO  = 1 / 1.8;   // 1 part malto per 1.8 total → ~55.6%
+const DEXTRO_RATIO = 0.8 / 1.8; // 0.8 part dextro → ~44.4%
+const MALTO_KCAL   = 3.8;       // kcal/g
+const DEXTRO_KCAL  = 3.7;       // kcal/g
+const BULK_KCAL_PER_PORTION = 149;
+const DEC_KCAL_PER_PORTION  = 135;
+
+// SaltStick per capsule (mg)
+const SS = { sodium: 215, calcium: 63, magnesium: 22, potassium: 11 };
+
+// Electrolyte targets per hour (mg) based on weather
+const ELYTE_TARGETS = {
+  cold: { sodiumPerH: 300,  capsMin: 1, capsMax: 2 },
+  mild: { sodiumPerH: 500,  capsMin: 2, capsMax: 3 },
+  warm: { sodiumPerH: 750,  capsMin: 3, capsMax: 4 },
+  hot:  { sodiumPerH: 1000, capsMin: 4, capsMax: 6 },
+};
+
+// ── DOM refs
+const carbsSlider  = document.getElementById('carbs-slider');
+const carbsDisplay = document.getElementById('carbs-display');
+const durDisplay   = document.getElementById('dur-display');
+const weatherSel   = document.getElementById('weather-sel');
+const bulkCheck    = document.getElementById('bulk-check');
+const decCheck     = document.getElementById('dec-check');
+const bulkCard     = document.getElementById('bulk-card');
+const decCard      = document.getElementById('dec-card');
+const bulkPortions = document.getElementById('bulk-portions');
+const decPortions  = document.getElementById('dec-portions');
+
+// ── Slider
+carbsSlider.addEventListener('input', () => {
+  carbsPerH = +carbsSlider.value;
+  carbsDisplay.innerHTML = `${carbsPerH}<span>g/h</span>`;
+  updateSliderTrack();
+  calculate();
+});
+
+function updateSliderTrack() {
+  const pct = ((carbsPerH - 50) / 80) * 100;
+  carbsSlider.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, var(--border) ${pct}%, var(--border) 100%)`;
+}
+updateSliderTrack();
+
+// ── Duration buttons
+document.querySelectorAll('.dur-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    durMins = +btn.dataset.min;
+    updateDurDisplay();
+    calculate();
+  });
+});
+
+function updateDurDisplay() {
+  const h = Math.floor(durMins / 60);
+  const m = durMins % 60;
+  durDisplay.innerHTML = h > 0
+    ? `${h}<span>h ${String(m).padStart(2,'0')}m</span>`
+    : `${m}<span>min</span>`;
+}
+updateDurDisplay();
+
+// ── Weather
+weatherSel.addEventListener('change', calculate);
+
+// ── Mix toggles
+function setupMixCard(card, checkbox, checkmark, id) {
+  card.addEventListener('click', (e) => {
+    if (e.target.tagName === 'INPUT' && e.target.type === 'number') return;
+    checkbox.checked = !checkbox.checked;
+    const on = checkbox.checked;
+    card.classList.toggle('checked', on);
+    checkmark.style.background = on ? 'var(--blue)' : '';
+    checkmark.style.borderColor = on ? 'var(--blue)' : '';
+    if (id === 'bulk') useBulk = on;
+    else useDec = on;
+    calculate();
+  });
+}
+setupMixCard(bulkCard, bulkCheck, document.getElementById('bulk-checkmark'), 'bulk');
+setupMixCard(decCard,  decCheck,  document.getElementById('dec-checkmark'),  'dec');
+bulkPortions.addEventListener('input', calculate);
+decPortions.addEventListener('input',  calculate);
+
+// ── CALCULATE
+function calculate() {
+  const hours        = durMins / 60;
+  const totalCarbsTarget = carbsPerH * hours;
+  const weather      = weatherSel.value;
+  const elTarget     = ELYTE_TARGETS[weather];
+
+  // Carbs from mixes (additional)
+  const bulkPorts = useBulk ? +bulkPortions.value : 0;
+  const decPorts  = useDec  ? +decPortions.value  : 0;
+  const bulkCarbs = bulkPorts * 35;   // 35g per 40g portion
+  const decCarbs  = decPorts  * 34;   // 34g per 38g portion
+  const mixCarbs  = bulkCarbs + decCarbs;
+  const mixKcal   = (bulkPorts * BULK_KCAL_PER_PORTION) + (decPorts * DEC_KCAL_PER_PORTION);
+
+  // Own mix carbs needed
+  const ownCarbsTotal = Math.max(0, totalCarbsTarget - mixCarbs);
+  const maltoG  = Math.round(ownCarbsTotal * MALTO_RATIO);
+  const dextroG = Math.round(ownCarbsTotal * DEXTRO_RATIO);
+  const ownKcal = Math.round(maltoG * MALTO_KCAL + dextroG * DEXTRO_KCAL);
+  const totalKcal = ownKcal + mixKcal;
+
+  // Display own mix
+  set('r-malto', maltoG, 'g');
+  set('r-dextro', dextroG, 'g');
+  set('r-kcal', totalKcal, 'kcal');
+  document.getElementById('r-malto-sub').textContent = `~${Math.round(maltoG * MALTO_KCAL)} kcal`;
+  document.getElementById('r-dextro-sub').textContent = `~${Math.round(dextroG * DEXTRO_KCAL)} kcal`;
+  document.getElementById('r-kcal-sub').textContent = `${Math.round(totalKcal / hours)} kcal/h`;
+
+  // Breakdown rows
+  const rows = [];
+  rows.push({ name: 'Maltodextrin (eigen)', g: maltoG, kcal: Math.round(maltoG * MALTO_KCAL), color: '#E8FF3C' });
+  rows.push({ name: 'Dextrose (eigen)',     g: dextroG, kcal: Math.round(dextroG * DEXTRO_KCAL), color: '#FFDA3C' });
+  if (bulkCarbs > 0) rows.push({ name: `BULK (${bulkPorts}×)`, g: bulkCarbs, kcal: bulkPorts * BULK_KCAL_PER_PORTION, color: '#3C8EFF' });
+  if (decCarbs  > 0) rows.push({ name: `Decathlon (${decPorts}×)`, g: decCarbs,  kcal: decPorts * DEC_KCAL_PER_PORTION,  color: '#FFB830' });
+
+  const bRows = document.getElementById('breakdown-rows');
+  bRows.innerHTML = rows.map(r => `
+    <div class="breakdown-row">
+      <div class="breakdown-name">
+        <div class="breakdown-dot" style="background:${r.color}"></div>
+        ${r.name}
+      </div>
+      <div class="breakdown-val">${r.g}g · ${r.kcal} kcal</div>
+    </div>
+  `).join('');
+
+  // Calorie bar
+  const calBar = document.getElementById('cal-bar');
+  calBar.innerHTML = rows.map(r => `<div class="cal-seg" style="background:${r.color};flex:${r.kcal};min-width:4px"></div>`).join('');
+
+  // Elektrolyte
+  const capsPerH    = Math.round((elTarget.sodiumPerH / SS.sodium) * 10) / 10;
+  const totalCaps   = Math.ceil(capsPerH * hours);
+  const totalSodium = Math.round(totalCaps * SS.sodium);
+
+  set('r-caps', totalCaps, ' Kapseln');
+  set('r-sodium', Math.round(elTarget.sodiumPerH), 'mg');
+  document.getElementById('r-caps-sub').textContent =
+    `${capsPerH.toFixed(1)}/h · alle ${Math.round(60 / capsPerH)} Min 1 Kapsel`;
+
+  // Warn if mixes already cover electrolytes
+  const warnEl = document.getElementById('elyte-warn');
+  if (useBulk && bulkPorts > 0) {
+    warnEl.innerHTML = `<div class="warn-pill">⚠️ BULK enthält bereits Elektrolyte – Kapsel-Bedarf ggf. reduzieren</div>`;
+  } else {
+    warnEl.innerHTML = '';
+  }
+
+  // Water
+  const totalPowderG = maltoG + dextroG + (bulkPorts * 40) + (decPorts * 38);
+  const waterMin = Math.round(totalPowderG * 8);
+  const waterMax = Math.round(totalPowderG * 12);
+  document.getElementById('r-water').innerHTML =
+    `💧 Wasser: mindestens <strong style="color:var(--text)">${waterMin}–${waterMax}ml</strong> einplanen · 
+    Konzentration ~8–10% für optimale Magenverträglichkeit · 
+    Trinkziel: <strong style="color:var(--text)">${Math.round((waterMin + waterMax) / 2 / hours * 10) / 10} ml/h</strong>`;
+}
+
+function set(id, val, unit) {
+  document.getElementById(id).innerHTML = `${val}<span>${unit}</span>`;
+}
+
+// ── Dark / Light Mode (same logic as index.html)
+const themeToggle = document.getElementById('theme-toggle');
+const oneDay = 24 * 60 * 60 * 1000;
+function shouldBeDark() { const h = new Date().getHours(); return h >= 20 || h < 7; }
+
+const saved   = localStorage.getItem('theme');
+const savedAt = parseInt(localStorage.getItem('themeSetAt') || '0');
+if (saved && (Date.now() - savedAt) < oneDay) {
+  if (saved !== 'dark') document.body.classList.add('light');
+} else {
+  if (!shouldBeDark()) document.body.classList.add('light');
+  localStorage.removeItem('theme');
+}
+
+themeToggle.addEventListener('click', () => {
+  document.body.classList.toggle('light');
+  const isLight = document.body.classList.contains('light');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  localStorage.setItem('themeSetAt', Date.now().toString());
+});
+
+setInterval(() => {
+  const s = localStorage.getItem('theme');
+  const t = parseInt(localStorage.getItem('themeSetAt') || '0');
+  if (!s || (Date.now() - t) >= oneDay) {
+    if (shouldBeDark()) document.body.classList.remove('light');
+    else document.body.classList.add('light');
+  }
+}, 60000);
+
+// ── Init
+calculate();
+</script>
+</body>
+</html>
