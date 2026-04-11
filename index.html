@@ -88,7 +88,7 @@
     body.dark .theme-toggle::after { content: '🌙'; transform: translateX(24px); }
 
     .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-    .nav-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .nav-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
     .nav-btn {
       display: flex; align-items: center; justify-content: center; gap: 8px;
       height: 46px; border: 1.5px solid var(--border); border-radius: 12px;
@@ -517,6 +517,7 @@
       <div class="nav-row">
         <a href="abendroutine.html" class="nav-btn">🌙 Abendroutine</a>
         <a href="ernaehrungsplan.html" class="nav-btn">🥗 Ernährungsplan</a>
+        <a href="carbs.html" class="nav-btn">🚴 Carbs Rechner</a>
       </div>
 
       <!-- Light control -->
@@ -551,6 +552,7 @@
   <div class="nav-row" id="mobile-nav" style="display:none">
     <a href="abendroutine.html" class="nav-btn">🌙 Abendroutine</a>
     <a href="ernaehrungsplan.html" class="nav-btn">🥗 Ernährungsplan</a>
+    <a href="carbs.html" class="nav-btn">🚴 Carbs Rechner</a>
   </div>
 
   <!-- ══ MOBILE WEATHER STRIP (only visible on mobile, after form) ══ -->
