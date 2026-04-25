@@ -455,34 +455,40 @@
     .sheets-card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); box-shadow: var(--shadow);
-      padding: 18px 22px; display: flex; align-items: center;
-      gap: 24px; flex-wrap: wrap;
+      padding: 12px 20px; display: flex; align-items: center;
+      gap: 20px; flex-wrap: wrap;
     }
-    .sheets-stat { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 120px; }
-    .sheets-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-    .sheets-val { font-family: 'DM Mono', monospace; font-size: 32px; font-weight: 500; color: var(--text); line-height: 1; }
-    .sheets-val.positive { color: #2D6A4F; }
+    .sheets-stat { display: flex; align-items: center; gap: 10px; }
+    .sheets-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    .sheets-val {
+      font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500;
+      color: var(--text); line-height: 1; transition: color 0.3s;
+    }
+    .sheets-val.great    { color: #1a9862; }
+    .sheets-val.good     { color: #4caf7d; }
+    .sheets-val.neutral  { color: var(--muted); }
+    .sheets-val.warning  { color: #D97706; }
     .sheets-val.negative { color: #DC2626; }
-    .sheets-sub { font-size: 11px; color: var(--muted); }
-    .sheets-divider { width: 1px; height: 50px; background: var(--border); flex-shrink: 0; }
-    .sheets-sparrate-wrap { display: flex; align-items: center; gap: 8px; }
+    .sheets-sub { font-size: 10px; color: var(--muted); white-space: nowrap; }
+    .sheets-divider { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
+    .sheets-sparrate-wrap { display: flex; align-items: center; gap: 6px; }
     .sheets-sparrate-input {
-      font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500;
-      background: transparent; border: none; border-bottom: 2px solid var(--border);
-      color: var(--text); width: 100px; outline: none; transition: border-color 0.15s;
-      padding: 0 4px;
+      font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500;
+      background: transparent; border: none; border-bottom: 1.5px solid var(--border);
+      color: var(--text); width: 72px; outline: none; transition: border-color 0.15s;
+      padding: 0 2px;
     }
     .sheets-sparrate-input:focus { border-color: var(--text); }
     .sheets-sparrate-input::-webkit-outer-spin-button,
     .sheets-sparrate-input::-webkit-inner-spin-button { -webkit-appearance: none; }
     .sheets-save-btn {
-      padding: 6px 14px; border-radius: 8px; border: 1.5px solid var(--border);
-      background: transparent; font-family: 'DM Sans', sans-serif; font-size: 12px;
+      padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+      background: transparent; font-family: 'DM Sans', sans-serif; font-size: 11px;
       font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.15s;
     }
     .sheets-save-btn:hover { border-color: var(--text); color: var(--text); }
-    .sheets-save-btn.saved { border-color: #2D6A4F; color: #2D6A4F; }
-    .sheets-updated { font-size: 10px; color: var(--muted); }
+    .sheets-save-btn.saved { border-color: #1a9862; color: #1a9862; }
+    .sheets-updated { font-size: 10px; color: var(--muted); margin-left: auto; }
     @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
     /* ══ MOBILE OVERRIDES ══ */
@@ -525,20 +531,20 @@
   <!-- SHEETS FINANCE CARD -->
   <div class="sheets-card" id="sheets-card">
     <div class="sheets-stat">
-      <div class="sheets-label">💰 Pro Tag verfügbar</div>
-      <div class="sheets-val" id="sheets-daily">—</div>
-      <div class="sheets-sub" id="sheets-daily-sub">wird geladen…</div>
+      <span class="sheets-label">💰 Pro Tag verfügbar</span>
+      <span class="sheets-val" id="sheets-daily">—</span>
+      <span class="sheets-sub" id="sheets-daily-sub">lädt…</span>
     </div>
     <div class="sheets-divider"></div>
     <div class="sheets-stat">
-      <div class="sheets-label">📈 Sparrate / Monat</div>
+      <span class="sheets-label">📈 Sparrate / Monat</span>
       <div class="sheets-sparrate-wrap">
         <input type="number" class="sheets-sparrate-input" id="sheets-sparrate" placeholder="—" step="10"/>
-        <span style="font-size:16px;color:var(--muted)">€</span>
+        <span style="font-size:13px;color:var(--muted)">€</span>
         <button class="sheets-save-btn" id="sparrate-save-btn" onclick="saveSparrate()">Speichern</button>
       </div>
-      <div class="sheets-updated" id="sheets-updated">—</div>
     </div>
+    <span class="sheets-updated" id="sheets-updated"></span>
   </div>
 
   <!-- Topbar -->
@@ -1500,7 +1506,9 @@ const SHEETS_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVvTiUbd-9
 const APPS_SCRIPT_URL = localStorage.getItem('apps_script_url') || '';
 
 async function fetchCell(range) {
-  const res = await fetch(SHEETS_BASE + encodeURIComponent(range), { signal: AbortSignal.timeout(8000) });
+  const url = `https://docs.google.com/spreadsheets/d/e/2PACX-1vTVvTiUbd-9gQBaui310DQVRglT85CYjuNxB5KRtRWTNZBEBnrEtoMI58I2_vi8qPz8oGCmgaf1Rjo9/pubhtml?gid=965386565&single=true&chrome=false&widget=false&headers=false&range=${range}`;
+  // Use Cloudflare Worker to bypass CORS
+  const res = await fetch(`${WORKER_URL}/?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(8000) });
   const html = await res.text();
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const td = doc.querySelector('td');
@@ -1520,12 +1528,13 @@ async function loadSheets() {
     const dailySub = document.getElementById('sheets-daily-sub');
     if (!isNaN(daily)) {
       dailyEl.textContent = (daily >= 0 ? '+' : '') + daily.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
-      dailyEl.className   = 'sheets-val ' + (daily >= 0 ? 'positive' : 'negative');
-      dailySub.textContent = daily >= 0 ? 'noch verfügbar heute' : 'überzogen heute';
+      const cls = daily >= 20 ? 'great' : daily >= 5 ? 'good' : daily >= 0 ? 'neutral' : daily >= -10 ? 'warning' : 'negative';
+      dailyEl.className   = 'sheets-val ' + cls;
+      dailySub.textContent = daily >= 20 ? '✓ gut dabei' : daily >= 5 ? 'knapp ok' : daily >= 0 ? 'fast aufgebraucht' : daily >= -10 ? 'leicht überzogen' : 'überzogen';
     } else {
       dailyEl.textContent  = rawDaily || '—';
       dailyEl.className    = 'sheets-val';
-      dailySub.textContent = rawDaily ? `Rohwert: "${rawDaily}" – Parsing-Fehler` : 'Zelle leer oder falsche gid';
+      dailySub.textContent = rawDaily ? `"${rawDaily}"` : 'keine Daten';
     }
 
     // Parse sparrate (L47)
