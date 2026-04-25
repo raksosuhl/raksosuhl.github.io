@@ -437,6 +437,11 @@
       <span class="date-label" id="date-label"></span>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
+      <!-- Temp + outfit pill -->
+      <div id="topbar-weather" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--muted)">
+        <span id="topbar-temp" style="font-family:'DM Mono',monospace"></span>
+        <span id="topbar-outfit" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--text)"></span>
+      </div>
       <!-- Desktop nav buttons – compact -->
       <div class="desktop-nav" id="desktop-nav">
         <a href="abendroutine.html" class="nav-btn-sm">🌙 Abendroutine</a>
@@ -505,7 +510,21 @@
       <button class="submit-btn" id="submit-btn">Eintragen</button>
     </div>
 
-    <!-- RIGHT col 1: Weather -->
+    <!-- RIGHT col 1: Transit -->
+    <div class="weather-col">
+      <!-- Transit card -->
+      <div class="transit-card">
+        <div class="transit-header">
+          <div class="transit-title">🚇 ÖPNV Live</div>
+          <span class="transit-updated" id="transit-updated" onclick="loadTransit()">— aktualisieren</span>
+        </div>
+        <div id="transit-content">
+          <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px">Lädt…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT col 2: Weather -->
     <div class="weather-col">
       <div class="card" id="weather-card">
         <div id="weather-skeleton">
@@ -526,20 +545,6 @@
           <div class="skeleton" style="height:42px"></div>
         </div>
         <div id="weather-content" hidden></div>
-      </div>
-    </div>
-
-    <!-- RIGHT col 2: Transit + nav -->
-    <div class="weather-col">
-      <!-- Transit card -->
-      <div class="transit-card">
-        <div class="transit-header">
-          <div class="transit-title">🚇 ÖPNV Live</div>
-          <span class="transit-updated" id="transit-updated" onclick="loadTransit()">— aktualisieren</span>
-        </div>
-        <div id="transit-content">
-          <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px">Lädt…</div>
-        </div>
       </div>
     </div>
 
@@ -727,6 +732,22 @@ async function loadWeather() {
     const minTemp  = Math.min(...hTemps);
     const tRange   = maxTemp - minTemp || 1;
 
+    // Midnight temperature (0:00 tonight)
+    const midnightIdx = hourly.time.findIndex(t => {
+      const d = new Date(t);
+      return d.getHours() === 0 && d.getDate() === (new Date().getDate() + 1);
+    });
+    const midnightTemp = midnightIdx >= 0 ? Math.round(hourly.temperature_2m[midnightIdx]) : tMin;
+    const outfit = midnightTemp >= 15 ? { label: 'Pullover 🧥', emoji: '🧥' }
+                 : midnightTemp >= 10 ? { label: 'Jacke 🧣', emoji: '🧣' }
+                 : { label: 'Winterjacke 🧤', emoji: '🧤' };
+
+    // Update topbar
+    const topbarTemp   = document.getElementById('topbar-temp');
+    const topbarOutfit = document.getElementById('topbar-outfit');
+    if (topbarTemp)   topbarTemp.textContent   = `${tempNow}°`;
+    if (topbarOutfit) topbarOutfit.textContent  = outfit.label;
+
     // ── DESKTOP weather (full)
     let html = '';
     html += `<div class="w-hero">
@@ -747,7 +768,9 @@ async function loadWeather() {
     if (rainTomorrow >= 30) html += `<div class="w-alert rain">🌧 Morgen Regen möglich · ${rainTomorrow}%</div>`;
     if (rainToday < 30 && rainTomorrow < 30) html += `<div class="w-alert wind" style="background:var(--bg);color:var(--muted)">✅ Kein Regen heute oder morgen</div>`;
     if (wind >= 30)         html += `<div class="w-alert wind">💨 Wind · ${wind} km/h</div>`;
-    html += `<div class="w-alert uv ${uvL.high?'high':''}">🌞 UV ${uv} · ${uvL.text}${uvL.high?' · Sonnenschutz!':''}</div></div>`;
+    html += `<div class="w-alert uv ${uvL.high?'high':''}">🌞 UV ${uv} · ${uvL.text}${uvL.high?' · Sonnenschutz!':''}</div>`;
+    html += `<div class="w-alert" style="background:var(--bg);border-color:var(--border);color:var(--text)">${outfit.emoji} Heute Nacht ${midnightTemp}° · <strong>${outfit.label}</strong></div>`;
+    html += `</div>`;
     html += `<div>
       <button onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden;this.textContent=this.nextElementSibling.hidden?'▼ Stundenansicht anzeigen':'▲ Stundenansicht einklappen'"
         style="font-size:12px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 0;font-family:inherit;transition:color 0.15s"
@@ -797,6 +820,7 @@ async function loadWeather() {
     if (rainTomorrow >= 30) alerts.push(`<div class="w-mobile-alert rain">🌧 Regen morgen · ${rainTomorrow}%</div>`);
     if (wind >= 30)         alerts.push(`<div class="w-mobile-alert wind">💨 Wind · ${wind} km/h</div>`);
     if (uvL.high)           alerts.push(`<div class="w-mobile-alert uv${uvL.high?' high':''}">🌞 UV ${uv} · Sonnenschutz!</div>`);
+    alerts.push(`<div class="w-mobile-alert" style="background:var(--bg);border-color:var(--border);color:var(--text)">${outfit.emoji} Nacht ${midnightTemp}° · ${outfit.label}</div>`);
     if (alerts.length > 0)  mhtml += `<div class="w-mobile-alerts">${alerts.join('')}</div>`;
     // Collapsible hourly
     mhtml += `<div>
