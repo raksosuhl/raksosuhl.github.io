@@ -1016,18 +1016,18 @@ function isInward_U1(dest) {
   return inward.some(t => dest.includes(t));
 }
 
-// Tram 16/17 at Sandstraße: inward = toward Stachus/Schwabing (16 Richtung Schwabing, 17 Richtung Amalienburgstraße)
-// 16 stadteinwärts → Schwabing Nord / Münchner Freiheit
-// 16 stadtauswärts → Romanplatz / Amalienburgstraße
-// 17 stadteinwärts → Schwanseestraße / Johanneskirchen  
-// 17 stadtauswärts → Amalienburgstraße
+// Tram 20/21 an der Sandstraße:
+// 20 Richtung Karlsplatz/Stachus = stadteinwärts
+// 20 Richtung Moosach/Dachauer Str. = stadtauswärts
+// 21 Richtung Westfriedhof = stadtauswärts
+// 21 Richtung Maxvorstadt/Stachus = stadteinwärts
 function isInward_Tram(dest) {
   if (!dest) return false;
-  const inward = ['Schwabing','Münchner Freiheit','Schwanseestraße','Johanneskirchen','Effnerplatz','Bosch'];
-  const outward = ['Romanplatz','Amalienburg','Moosach','Pasing'];
+  const outward = ['Westfriedhof','Moosach','Dachauer','Leonrodplatz','Amalienburg','Romanplatz','Pasing'];
+  const inward  = ['Karlsplatz','Stachus','Sendlinger','Isartor','Wienerplatz','Schwabing','Max-Weber'];
   if (outward.some(t => dest.includes(t))) return false;
   if (inward.some(t => dest.includes(t))) return true;
-  return false; // unknown → show as outward
+  return false;
 }
 
 function fmtMin(depTimestampMs) {
