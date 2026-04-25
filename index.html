@@ -399,6 +399,16 @@
     }
     .m-collapse-body[hidden] { display: none !important; }
 
+    /* ══ FORM PROGRESSIVE REVEAL (all screen sizes) ══ */
+    #mobile-form-extra,
+    #suggestion-block,
+    #desc-block,
+    .date-chip,
+    #submit-btn { display: none; }
+    #mobile-form-extra.mobile-visible { display: flex; flex-direction: column; gap: 8px; }
+    .date-chip.mobile-visible { display: inline-flex; }
+    #submit-btn.mobile-visible { display: block; }
+
     /* ══ MOBILE OVERRIDES ══ */
     @media (max-width: 1024px) {
       .columns { grid-template-columns: 1fr 1fr; }
@@ -413,16 +423,6 @@
       .date-label { font-size: 11px; }
       .card { padding: 18px; gap: 16px; }
       .w-mobile-stats { grid-template-columns: repeat(2, 1fr); }
-
-      /* hide form extras until first amount button pressed */
-      #mobile-form-extra,
-      #suggestion-block,
-      #desc-block,
-      .date-chip,
-      #submit-btn { display: none; }
-      #mobile-form-extra.mobile-visible { display: flex; flex-direction: column; gap: 8px; }
-      .date-chip.mobile-visible { display: inline-flex; }
-      #submit-btn.mobile-visible { display: block; }
     }
   </style>
 </head>
@@ -617,10 +617,11 @@ function toggleMobileCard(id) {
 // ── Reveal mobile form extras on first amount button press
 let mobileFormRevealed = false;
 function revealMobileForm() {
-  if (mobileFormRevealed || window.innerWidth > 768) return;
+  if (mobileFormRevealed) return;
   mobileFormRevealed = true;
   document.getElementById('mobile-form-extra').classList.add('mobile-visible');
-  document.querySelector('.date-chip').classList.add('mobile-visible');
+  const dateChip = document.querySelector('.date-chip');
+  if (dateChip) dateChip.classList.add('mobile-visible');
   document.getElementById('submit-btn').classList.add('mobile-visible');
 }
 
@@ -847,7 +848,7 @@ const SUGGESTIONS = {
 const AUTO_DESC = { 'Drogerie': 'Drogerie' };
 
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-let mode = isTouchDevice ? 'buttons' : 'keyboard';
+let mode = 'buttons'; // always start with quick buttons, keyboard available via toggle
 const amountBlock  = document.getElementById('amount-block');
 const modeToggle   = document.getElementById('mode-toggle');
 const displayValue = document.getElementById('amount-display-value');
@@ -976,13 +977,11 @@ document.getElementById('submit-btn').addEventListener('click', () => {
     chipRow.innerHTML=''; suggestionBlock.hidden=true; descBlock.hidden=true;
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
     selectedCat=null; selectedChip=null;
-    // Reset mobile form
     mobileFormRevealed = false;
-    if (window.innerWidth <= 768) {
-      document.getElementById('mobile-form-extra').classList.remove('mobile-visible');
-      document.querySelector('.date-chip').classList.remove('mobile-visible');
-      document.getElementById('submit-btn').classList.remove('mobile-visible');
-    }
+    document.getElementById('mobile-form-extra').classList.remove('mobile-visible');
+    const dateChipEl = document.querySelector('.date-chip');
+    if (dateChipEl) dateChipEl.classList.remove('mobile-visible');
+    document.getElementById('submit-btn').classList.remove('mobile-visible');
     showToast();
   }, 300);
 });
