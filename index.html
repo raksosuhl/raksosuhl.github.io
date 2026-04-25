@@ -1512,15 +1512,34 @@ async function loadSheets() {
     // Layout: row0=[V2,W2,X2,Y2], row1=[V3,W3,X3,Y3], row2=[V4,W4,X4,Y4]
     // I38 -> first non-empty cell we find with the daily value
     // We parse all cells and find numeric values
-    const vals = [];
-    cells.forEach(td => {
-      const t = td.textContent.trim().replace(',','.');
-      if (t !== '') vals.push(t);
+    // Structure from V2:Y4:
+    // Row 2: "2" | "Über" | "3,2 €" | "Heute"
+    // Row 3: "3" | "Pro Tag Verfügbar" | VALUE | ""
+    // Row 4: "4" | "Ausgegeben p. Tag" | VALUE | ""
+    // We need row 3, column 3 (index 2 within row = X3) for daily value
+
+    const rows = doc.querySelectorAll('tr');
+    let daily = NaN, sparrate = NaN;
+
+    rows.forEach(row => {
+      const tds = row.querySelectorAll('td');
+      const labels = Array.from(tds).map(td => td.textContent.trim());
+      // Find "Pro Tag Verfügbar" row
+      const proTagIdx = labels.findIndex(l => l.includes('Pro Tag') || l.includes('Verfügbar'));
+      if (proTagIdx >= 0) {
+        // Value is next non-empty cell after label
+        for (let i = proTagIdx + 1; i < labels.length; i++) {
+          const v = labels[i].replace(/[€\s]/g,'').replace(',','.');
+          const n = parseFloat(v);
+          if (!isNaN(n)) { daily = n; break; }
+        }
+      }
     });
 
-    // vals[0] = I38 (pro Tag), vals[1] = L47 (sparrate) based on your range mapping
-    const daily    = parseFloat(vals[0]);
-    const sparrate = parseFloat(vals[1]);
+    // Sparrate comes from a separate fetch if Apps Script URL set,
+    // otherwise show last saved value from localStorage
+    const savedSparrate = localStorage.getItem('sparrate_local');
+    if (!isNaN(parseFloat(savedSparrate))) sparrate = parseFloat(savedSparrate);
 
     // Daily display
     const dailyEl = document.getElementById('sheets-daily');
@@ -1538,8 +1557,7 @@ async function loadSheets() {
     const sparEl = document.getElementById('sheets-sparrate');
     if (!isNaN(sparrate) && sparEl.value === '') {
       sparEl.value = sparrate.toFixed(0);
-    }
-    document.getElementById('sheets-updated').textContent =
+    }    document.getElementById('sheets-updated').textContent =
       'Stand: ' + new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
 
   } catch(e) {
@@ -1551,6 +1569,8 @@ async function loadSheets() {
 async function saveSparrate() {
   const val = document.getElementById('sheets-sparrate').value;
   const btn = document.getElementById('sparrate-save-btn');
+  // Always save locally
+  localStorage.setItem('sparrate_local', val);
 
   if (!APPS_SCRIPT_URL) {
     // Prompt to set Apps Script URL
