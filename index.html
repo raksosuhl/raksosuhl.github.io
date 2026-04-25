@@ -1496,72 +1496,52 @@ async function doBiometric() {
 // ══════════════════════════════════════════
 // ── GOOGLE SHEETS
 // ══════════════════════════════════════════
-const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVvTiUbd-9gQBaui310DQVRglT85CYjuNxB5KRtRWTNZBEBnrEtoMI58I2_vi8qPz8oGCmgaf1Rjo9/pubhtml?gid=453242315&single=true&chrome=false&widget=false&headers=false&range=V2:Y4';
-
-// Apps Script URL für Schreiben – nach Setup hier eintragen:
+const SHEETS_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVvTiUbd-9gQBaui310DQVRglT85CYjuNxB5KRtRWTNZBEBnrEtoMI58I2_vi8qPz8oGCmgaf1Rjo9/pubhtml?gid=453242315&single=true&chrome=false&widget=false&headers=false&range=';
 const APPS_SCRIPT_URL = localStorage.getItem('apps_script_url') || '';
+
+async function fetchCell(range) {
+  const res = await fetch(SHEETS_BASE + encodeURIComponent(range), { signal: AbortSignal.timeout(8000) });
+  const html = await res.text();
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const td = doc.querySelector('td');
+  return td ? td.textContent.trim() : null;
+}
 
 async function loadSheets() {
   try {
-    const res  = await fetch(SHEETS_URL, { signal: AbortSignal.timeout(8000) });
-    const html = await res.text();
-    const parser = new DOMParser();
-    const doc    = parser.parseFromString(html, 'text/html');
-    const cells  = doc.querySelectorAll('td');
-    // V2:Y4 = 3 rows × 4 cols = 12 cells
-    // Layout: row0=[V2,W2,X2,Y2], row1=[V3,W3,X3,Y3], row2=[V4,W4,X4,Y4]
-    // I38 -> first non-empty cell we find with the daily value
-    // We parse all cells and find numeric values
-    // Structure from V2:Y4:
-    // Row 2: "2" | "Über" | "3,2 €" | "Heute"
-    // Row 3: "3" | "Pro Tag Verfügbar" | VALUE | ""
-    // Row 4: "4" | "Ausgegeben p. Tag" | VALUE | ""
-    // We need row 3, column 3 (index 2 within row = X3) for daily value
+    const [rawDaily, rawSparrate] = await Promise.all([
+      fetchCell('I38:I38'),
+      fetchCell('L47:L47'),
+    ]);
 
-    const rows = doc.querySelectorAll('tr');
-    let daily = NaN, sparrate = NaN;
-
-    rows.forEach(row => {
-      const tds = row.querySelectorAll('td');
-      const labels = Array.from(tds).map(td => td.textContent.trim());
-      // Find "Pro Tag Verfügbar" row
-      const proTagIdx = labels.findIndex(l => l.includes('Pro Tag') || l.includes('Verfügbar'));
-      if (proTagIdx >= 0) {
-        // Value is next non-empty cell after label
-        for (let i = proTagIdx + 1; i < labels.length; i++) {
-          const v = labels[i].replace(/[€\s]/g,'').replace(',','.');
-          const n = parseFloat(v);
-          if (!isNaN(n)) { daily = n; break; }
-        }
-      }
-    });
-
-    // Sparrate comes from a separate fetch if Apps Script URL set,
-    // otherwise show last saved value from localStorage
-    const savedSparrate = localStorage.getItem('sparrate_local');
-    if (!isNaN(parseFloat(savedSparrate))) sparrate = parseFloat(savedSparrate);
-
-    // Daily display
-    const dailyEl = document.getElementById('sheets-daily');
+    // Parse daily (I38) – format may be "−55,06" or "-55.06" or "55,06 €"
+    const daily = parseFloat((rawDaily||'').replace(/[€\s\u00a0]/g,'').replace('−','-').replace(',','.'));
+    const dailyEl  = document.getElementById('sheets-daily');
     const dailySub = document.getElementById('sheets-daily-sub');
     if (!isNaN(daily)) {
-      dailyEl.textContent = (daily >= 0 ? '+' : '') + daily.toFixed(2) + ' €';
+      dailyEl.textContent = (daily >= 0 ? '+' : '') + daily.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
       dailyEl.className   = 'sheets-val ' + (daily >= 0 ? 'positive' : 'negative');
       dailySub.textContent = daily >= 0 ? 'noch verfügbar heute' : 'überzogen heute';
     } else {
-      dailyEl.textContent = '—';
-      dailySub.textContent = 'keine Daten';
+      dailyEl.textContent  = rawDaily || '—';
+      dailySub.textContent = 'Wert aus Tabelle';
     }
 
-    // Sparrate display
+    // Parse sparrate (L47)
+    const sparrate = parseFloat((rawSparrate||'').replace(/[€\s\u00a0]/g,'').replace(',','.'));
     const sparEl = document.getElementById('sheets-sparrate');
     if (!isNaN(sparrate) && sparEl.value === '') {
       sparEl.value = sparrate.toFixed(0);
-    }    document.getElementById('sheets-updated').textContent =
+    } else {
+      const saved = localStorage.getItem('sparrate_local');
+      if (saved && sparEl.value === '') sparEl.value = saved;
+    }
+
+    document.getElementById('sheets-updated').textContent =
       'Stand: ' + new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
 
   } catch(e) {
-    document.getElementById('sheets-daily').textContent = '—';
+    document.getElementById('sheets-daily').textContent     = '—';
     document.getElementById('sheets-daily-sub').textContent = 'Fehler beim Laden';
   }
 }
