@@ -394,6 +394,51 @@
     }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
+    /* ══ TRANSIT CARD ══ */
+    .transit-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .transit-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .transit-title {
+      font-size: 11px; font-weight: 500; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .transit-updated { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; cursor: pointer; }
+    .transit-updated:hover { color: var(--text); }
+    .transit-station-name {
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      letter-spacing: 0.05em; text-transform: uppercase;
+      border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 2px;
+    }
+    .transit-dir-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; letter-spacing:0.03em; }
+    .transit-dep-row {
+      display: flex; align-items: center; gap: 8px; padding: 4px 0;
+    }
+    .t-badge {
+      font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 700;
+      padding: 2px 7px; border-radius: 5px; flex-shrink: 0; min-width: 34px; text-align: center;
+    }
+    .t-badge.u { background: #006CB4; color: #fff; }
+    .t-badge.t { background: #C4161C; color: #fff; }
+    body.dark .t-badge.u { background: #1A8AD4; }
+    body.dark .t-badge.t { background: #E63840; }
+    .t-dest { font-size: 13px; font-weight: 500; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .t-times { display: flex; gap: 5px; flex-shrink: 0; }
+    .t-min {
+      font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+      padding: 2px 6px; min-width: 36px; text-align: center; color: var(--text);
+    }
+    .t-min.now  { background: #1A9862; color: #fff; border-color: #1A9862; }
+    .t-min.soon { background: #D97706; color: #fff; border-color: #D97706; }
+    .t-hbf { font-size: 10px; color: var(--muted); }
+    .t-divider { height: 1px; background: var(--border); margin: 4px 0; }
+    .t-section { display: flex; flex-direction: column; gap: 2px; }
+
     /* ══ TOAST ══ */
     .toast {
       position: fixed; bottom: 28px; left: 50%;
@@ -543,6 +588,17 @@
             <span class="light-btn-icon">🌑</span>
             <span class="light-btn-label">Aus</span>
           </button>
+        </div>
+      </div>
+
+      <!-- Transit card -->
+      <div class="transit-card">
+        <div class="transit-header">
+          <div class="transit-title">🚇 ÖPNV Live</div>
+          <span class="transit-updated" id="transit-updated" onclick="loadTransit()">— aktualisieren</span>
+        </div>
+        <div id="transit-content">
+          <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px">Lädt…</div>
         </div>
       </div>
 
@@ -939,6 +995,143 @@ lightBtns.forEach(btn => {
     }
   });
 });
+
+// ── Transit / MVG
+// globalIds: Stiglmaierplatz U-Bahn = de:09162:540, Sandstraße Tram = de:09162:542
+// Travel times from these stations to Hbf (U-Bahn: ~3min, Tram 16/17: ~6min)
+const STATIONS = [
+  {
+    id: 'de:09162:540',
+    name: 'Stiglmaierplatz',
+    type: 'UBAHN',
+    badge: 'u',
+    // U1 toward Hbf: destination contains "Hauptbahnhof" or "Innsbrucker" etc
+    // U1 stadteinwärts = Richtung Hauptbahnhof / Sendlinger Tor / Olympia
+    // U1 stadtauswärts = Richtung OEZ / Moosach
+    inward: { label: '→ Stadt · Hbf', hbfMin: 3, filter: d => d.label==='U1' && isInward_U1(d.destination) },
+    outward:{ label: '→ Stadtauswärts', filter: d => d.label==='U1' && !isInward_U1(d.destination) },
+  },
+  {
+    id: 'de:09162:542',
+    name: 'Sandstraße',
+    type: 'TRAM',
+    badge: 't',
+    inward: { label: '→ Stadt · Hbf', hbfMin: 6, filter: d => (d.label==='16'||d.label==='17') && isInward_Tram(d.destination) },
+    outward:{ label: '→ Stadtauswärts', filter: d => (d.label==='16'||d.label==='17') && !isInward_Tram(d.destination) },
+  },
+];
+
+// U1 inward destinations (toward city center / Hbf)
+function isInward_U1(dest) {
+  const inwardTermini = ['Hauptbahnhof','Mangfallplatz','Ostbahnhof','Riem','Messestadt','Fröttmaning','Garching'];
+  return inwardTermini.some(t => dest && dest.includes(t));
+}
+
+// Tram 16/17 inward = toward Hbf / Stachus / Scheidplatz direction
+function isInward_Tram(dest) {
+  const inwardTermini = ['Hauptbahnhof','Stachus','Scheidplatz','Romanplatz','St.','Amalienburg'];
+  return inwardTermini.some(t => dest && dest.includes(t));
+}
+
+function fmtMin(depTimestampMs) {
+  const diff = Math.round((depTimestampMs - Date.now()) / 60000);
+  if (diff <= 0) return { label: 'Jetzt', cls: 'now' };
+  if (diff <= 4)  return { label: diff + ' min', cls: 'soon' };
+  return { label: diff + ' min', cls: '' };
+}
+
+async function fetchDepartures(globalId, transportType) {
+  const proxy = 'https://corsproxy.io/?';
+  const url = `https://www.mvg.de/api/fib/v2/departure?globalId=${globalId}&limit=20&transportTypes=${transportType}`;
+  const res = await fetch(proxy + encodeURIComponent(url));
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return await res.json();
+}
+
+function renderStation(station, deps) {
+  const inDeps  = deps.filter(station.inward.filter).slice(0, 3);
+  const outDeps = deps.filter(station.outward.filter).slice(0, 2);
+
+  let html = `<div class="transit-station-name">${station.name}</div>`;
+
+  // Inward
+  html += `<div class="t-section">`;
+  html += `<div class="transit-dir-label">${station.inward.label}</div>`;
+  if (inDeps.length === 0) {
+    html += `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine Abfahrten</div>`;
+  } else {
+    inDeps.forEach(d => {
+      const depMs = (d.realtimeDepartureTime || d.plannedDepartureTime) * 1000;
+      const { label, cls } = fmtMin(depMs);
+      const hbfArr = new Date(depMs + station.inward.hbfMin * 60000);
+      const hbfStr = hbfArr.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      html += `<div class="transit-dep-row">
+        <span class="t-badge ${station.badge}">${d.label}</span>
+        <span class="t-dest">${d.destination}</span>
+        <span class="t-times">
+          <span class="t-min ${cls}">${label}</span>
+        </span>
+        <span class="t-hbf">Hbf ~${hbfStr}</span>
+      </div>`;
+    });
+  }
+  html += `</div>`;
+
+  // Divider
+  html += `<div class="t-divider"></div>`;
+
+  // Outward
+  html += `<div class="t-section">`;
+  html += `<div class="transit-dir-label">${station.outward.label}</div>`;
+  if (outDeps.length === 0) {
+    html += `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine Abfahrten</div>`;
+  } else {
+    outDeps.forEach(d => {
+      const depMs = (d.realtimeDepartureTime || d.plannedDepartureTime) * 1000;
+      const { label, cls } = fmtMin(depMs);
+      html += `<div class="transit-dep-row">
+        <span class="t-badge ${station.badge}">${d.label}</span>
+        <span class="t-dest">${d.destination}</span>
+        <span class="t-times"><span class="t-min ${cls}">${label}</span></span>
+      </div>`;
+    });
+  }
+  html += `</div>`;
+
+  return html;
+}
+
+async function loadTransit() {
+  const content = document.getElementById('transit-content');
+  const updated = document.getElementById('transit-updated');
+  updated.textContent = '⟳ lädt…';
+
+  try {
+    const results = await Promise.all(
+      STATIONS.map(s => fetchDepartures(s.id, s.type))
+    );
+
+    let html = '';
+    STATIONS.forEach((s, i) => {
+      if (i > 0) html += `<div class="t-divider" style="margin:10px 0"></div>`;
+      const deps = results[i];
+      html += renderStation(s, Array.isArray(deps) ? deps : (deps.departures || []));
+    });
+
+    content.innerHTML = html;
+    const now = new Date();
+    updated.textContent = `Aktualisiert ${now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} · klicken`;
+  } catch(e) {
+    content.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0">
+      ⚠️ MVG-Daten nicht verfügbar<br><span style="font-size:11px">CORS-Block im Browser – funktioniert lokal oder mit Extension</span>
+    </div>`;
+    updated.textContent = 'Fehler · erneut klicken';
+  }
+}
+
+// Load on start, refresh every 30s
+loadTransit();
+setInterval(loadTransit, 30000);
 
 function showToast() {
   const t = document.getElementById('toast');
