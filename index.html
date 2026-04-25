@@ -411,6 +411,80 @@
     .date-chip.mobile-visible { display: inline-flex; }
     #submit-btn.mobile-visible { display: block; }
 
+    /* ══ LOGIN OVERLAY ══ */
+    .login-blur { filter: blur(8px) brightness(0.7); pointer-events: none; user-select: none; transition: filter 0.4s; }
+    .login-overlay {
+      position: fixed; inset: 0; z-index: 999;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .login-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 32px 28px; width: 100%; max-width: 380px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+      display: flex; flex-direction: column; gap: 18px;
+      animation: fadeUp 0.3s ease;
+    }
+    .login-title { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; text-align: center; }
+    .login-sub { font-size: 13px; color: var(--muted); text-align: center; }
+    .login-input {
+      width: 100%; padding: 13px 16px; border: 1.5px solid var(--border);
+      border-radius: 11px; background: var(--bg); font-family: 'DM Sans', sans-serif;
+      font-size: 16px; color: var(--text); outline: none; transition: border-color 0.15s;
+      text-align: center; letter-spacing: 0.15em;
+    }
+    .login-input:focus { border-color: var(--text); }
+    .login-btn {
+      width: 100%; padding: 13px; border-radius: 11px; border: none;
+      background: var(--text); color: var(--accent-fg);
+      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .login-btn:hover { opacity: 0.85; }
+    .login-bio-btn {
+      width: 100%; padding: 11px; border-radius: 11px;
+      border: 1.5px solid var(--border); background: transparent;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+      color: var(--muted); cursor: pointer; transition: all 0.15s; display: none;
+    }
+    .login-bio-btn:hover { border-color: var(--text); color: var(--text); }
+    .login-bio-btn.visible { display: block; }
+    .login-err { font-size: 12px; color: #DC2626; text-align: center; display: none; }
+    .login-err.show { display: block; }
+
+    /* ══ SHEETS CARD ══ */
+    .sheets-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 18px 22px; display: flex; align-items: center;
+      gap: 24px; flex-wrap: wrap;
+    }
+    .sheets-stat { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 120px; }
+    .sheets-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .sheets-val { font-family: 'DM Mono', monospace; font-size: 32px; font-weight: 500; color: var(--text); line-height: 1; }
+    .sheets-val.positive { color: #2D6A4F; }
+    .sheets-val.negative { color: #DC2626; }
+    .sheets-sub { font-size: 11px; color: var(--muted); }
+    .sheets-divider { width: 1px; height: 50px; background: var(--border); flex-shrink: 0; }
+    .sheets-sparrate-wrap { display: flex; align-items: center; gap: 8px; }
+    .sheets-sparrate-input {
+      font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500;
+      background: transparent; border: none; border-bottom: 2px solid var(--border);
+      color: var(--text); width: 100px; outline: none; transition: border-color 0.15s;
+      padding: 0 4px;
+    }
+    .sheets-sparrate-input:focus { border-color: var(--text); }
+    .sheets-sparrate-input::-webkit-outer-spin-button,
+    .sheets-sparrate-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .sheets-save-btn {
+      padding: 6px 14px; border-radius: 8px; border: 1.5px solid var(--border);
+      background: transparent; font-family: 'DM Sans', sans-serif; font-size: 12px;
+      font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.15s;
+    }
+    .sheets-save-btn:hover { border-color: var(--text); color: var(--text); }
+    .sheets-save-btn.saved { border-color: #2D6A4F; color: #2D6A4F; }
+    .sheets-updated { font-size: 10px; color: var(--muted); }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
     /* ══ MOBILE OVERRIDES ══ */
     @media (max-width: 1024px) {
       .columns { grid-template-columns: 1fr 1fr; }
@@ -430,7 +504,42 @@
 </head>
 <body>
 
-<div class="page">
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-title">🔐 Dashboard</div>
+    <div class="login-sub" id="login-sub">Passwort eingeben</div>
+    <input type="password" class="login-input" id="login-input" placeholder="••••••••" maxlength="64"
+      onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div class="login-err" id="login-err">Falsches Passwort</div>
+    <button class="login-btn" onclick="doLogin()">Entsperren</button>
+    <button class="login-bio-btn" id="bio-btn" onclick="doBiometric()">
+      👆 Face ID / Touch ID
+    </button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;line-height:1.5" id="login-hint"></div>
+  </div>
+</div>
+
+<div class="page" id="main-page">
+
+  <!-- SHEETS FINANCE CARD -->
+  <div class="sheets-card" id="sheets-card">
+    <div class="sheets-stat">
+      <div class="sheets-label">💰 Pro Tag verfügbar</div>
+      <div class="sheets-val" id="sheets-daily">—</div>
+      <div class="sheets-sub" id="sheets-daily-sub">wird geladen…</div>
+    </div>
+    <div class="sheets-divider"></div>
+    <div class="sheets-stat">
+      <div class="sheets-label">📈 Sparrate / Monat</div>
+      <div class="sheets-sparrate-wrap">
+        <input type="number" class="sheets-sparrate-input" id="sheets-sparrate" placeholder="—" step="10"/>
+        <span style="font-size:16px;color:var(--muted)">€</span>
+        <button class="sheets-save-btn" id="sparrate-save-btn" onclick="saveSparrate()">Speichern</button>
+      </div>
+      <div class="sheets-updated" id="sheets-updated">—</div>
+    </div>
+  </div>
 
   <!-- Topbar -->
   <div class="topbar">
@@ -596,7 +705,7 @@
     <a href="wunschliste.html" class="nav-btn">🛒 Wunschliste</a>
   </div>
 
-</div>
+</div><!-- end main-page -->
 
 <div class="toast" id="toast">✓ Ausgabe eingetragen</div>
 
@@ -1245,6 +1354,228 @@ async function loadTransit() {
 // Load on start, refresh every 30s
 loadTransit();
 setInterval(loadTransit, 30000);
+
+// ══════════════════════════════════════════
+// ── LOGIN + BIOMETRIC
+// ══════════════════════════════════════════
+const LOGIN_KEY    = 'dash_auth';
+const LOGIN_AT_KEY = 'dash_auth_at';
+const PW_HASH_KEY  = 'dash_pw_hash';
+const BIO_KEY      = 'dash_bio_enabled';
+const SESSION_TTL  = 7 * 24 * 60 * 60 * 1000; // 7 Tage
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function initLogin() {
+  const overlay   = document.getElementById('login-overlay');
+  const mainPage  = document.getElementById('main-page');
+  const bioBtn    = document.getElementById('bio-btn');
+  const hint      = document.getElementById('login-hint');
+
+  // Check if already authenticated (within TTL)
+  const authed = localStorage.getItem(LOGIN_KEY);
+  const authedAt = +localStorage.getItem(LOGIN_AT_KEY) || 0;
+  if (authed === 'true' && Date.now() - authedAt < SESSION_TTL) {
+    unlock(); return;
+  }
+
+  // Check if password is set
+  const pwHash = localStorage.getItem(PW_HASH_KEY);
+  if (!pwHash) {
+    // First time: set password
+    document.getElementById('login-sub').textContent = 'Passwort festlegen (erstes Mal)';
+    hint.textContent = 'Wähle ein Passwort für dein Dashboard.';
+    overlay.style.display = 'flex';
+    mainPage.classList.add('login-blur');
+    return;
+  }
+
+  // Show biometric button if enabled
+  if (localStorage.getItem(BIO_KEY) === 'true' && window.PublicKeyCredential) {
+    bioBtn.classList.add('visible');
+    hint.textContent = 'Oder mit Passwort entsperren ↑';
+    // Auto-trigger biometric
+    setTimeout(doBiometric, 400);
+  }
+
+  overlay.style.display = 'flex';
+  mainPage.classList.add('login-blur');
+  document.getElementById('login-input').focus();
+}
+
+async function doLogin() {
+  const input  = document.getElementById('login-input');
+  const pw     = input.value;
+  const errEl  = document.getElementById('login-err');
+  if (!pw) return;
+
+  const hash   = await sha256(pw);
+  const stored = localStorage.getItem(PW_HASH_KEY);
+
+  if (!stored) {
+    // Setting password for first time
+    localStorage.setItem(PW_HASH_KEY, hash);
+    unlock();
+    offerBiometric();
+    return;
+  }
+
+  if (hash === stored) {
+    unlock();
+    if (localStorage.getItem(BIO_KEY) !== 'true') offerBiometric();
+  } else {
+    errEl.classList.add('show');
+    input.value = '';
+    input.focus();
+    setTimeout(() => errEl.classList.remove('show'), 2500);
+  }
+}
+
+function unlock() {
+  localStorage.setItem(LOGIN_KEY, 'true');
+  localStorage.setItem(LOGIN_AT_KEY, Date.now());
+  const overlay  = document.getElementById('login-overlay');
+  const mainPage = document.getElementById('main-page');
+  overlay.style.display = 'none';
+  mainPage.classList.remove('login-blur');
+  loadSheets();
+}
+
+// Biometric via WebAuthn (platform authenticator = Face ID / Touch ID)
+async function offerBiometric() {
+  if (!window.PublicKeyCredential) return;
+  const supported = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  if (!supported) return;
+
+  const hint = document.getElementById('login-hint');
+  // Show offer after unlock (already unlocked, so show as toast-like)
+  if (confirm('Face ID / Touch ID für zukünftige Logins aktivieren?')) {
+    await registerBiometric();
+  }
+}
+
+async function registerBiometric() {
+  try {
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rp: { name: 'Dashboard' },
+        user: { id: new Uint8Array(16), name: 'oskar', displayName: 'Oskar' },
+        pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 30000,
+      }
+    });
+    // Store credential ID
+    const credId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+    localStorage.setItem(BIO_KEY, 'true');
+    localStorage.setItem('dash_cred_id', credId);
+  } catch(e) { /* user cancelled */ }
+}
+
+async function doBiometric() {
+  const credId = localStorage.getItem('dash_cred_id');
+  if (!credId) return;
+  try {
+    const rawId = Uint8Array.from(atob(credId), c => c.charCodeAt(0));
+    await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [{ id: rawId, type: 'public-key' }],
+        userVerification: 'required',
+        timeout: 30000,
+      }
+    });
+    unlock();
+  } catch(e) { /* user cancelled or failed */ }
+}
+
+// ══════════════════════════════════════════
+// ── GOOGLE SHEETS
+// ══════════════════════════════════════════
+const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVvTiUbd-9gQBaui310DQVRglT85CYjuNxB5KRtRWTNZBEBnrEtoMI58I2_vi8qPz8oGCmgaf1Rjo9/pubhtml?gid=453242315&single=true&chrome=false&widget=false&headers=false&range=V2:Y4';
+
+// Apps Script URL für Schreiben – nach Setup hier eintragen:
+const APPS_SCRIPT_URL = localStorage.getItem('apps_script_url') || '';
+
+async function loadSheets() {
+  try {
+    const res  = await fetch(SHEETS_URL, { signal: AbortSignal.timeout(8000) });
+    const html = await res.text();
+    const parser = new DOMParser();
+    const doc    = parser.parseFromString(html, 'text/html');
+    const cells  = doc.querySelectorAll('td');
+    // V2:Y4 = 3 rows × 4 cols = 12 cells
+    // Layout: row0=[V2,W2,X2,Y2], row1=[V3,W3,X3,Y3], row2=[V4,W4,X4,Y4]
+    // I38 -> first non-empty cell we find with the daily value
+    // We parse all cells and find numeric values
+    const vals = [];
+    cells.forEach(td => {
+      const t = td.textContent.trim().replace(',','.');
+      if (t !== '') vals.push(t);
+    });
+
+    // vals[0] = I38 (pro Tag), vals[1] = L47 (sparrate) based on your range mapping
+    const daily    = parseFloat(vals[0]);
+    const sparrate = parseFloat(vals[1]);
+
+    // Daily display
+    const dailyEl = document.getElementById('sheets-daily');
+    const dailySub = document.getElementById('sheets-daily-sub');
+    if (!isNaN(daily)) {
+      dailyEl.textContent = (daily >= 0 ? '+' : '') + daily.toFixed(2) + ' €';
+      dailyEl.className   = 'sheets-val ' + (daily >= 0 ? 'positive' : 'negative');
+      dailySub.textContent = daily >= 0 ? 'noch verfügbar heute' : 'überzogen heute';
+    } else {
+      dailyEl.textContent = '—';
+      dailySub.textContent = 'keine Daten';
+    }
+
+    // Sparrate display
+    const sparEl = document.getElementById('sheets-sparrate');
+    if (!isNaN(sparrate) && sparEl.value === '') {
+      sparEl.value = sparrate.toFixed(0);
+    }
+    document.getElementById('sheets-updated').textContent =
+      'Stand: ' + new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+
+  } catch(e) {
+    document.getElementById('sheets-daily').textContent = '—';
+    document.getElementById('sheets-daily-sub').textContent = 'Fehler beim Laden';
+  }
+}
+
+async function saveSparrate() {
+  const val = document.getElementById('sheets-sparrate').value;
+  const btn = document.getElementById('sparrate-save-btn');
+
+  if (!APPS_SCRIPT_URL) {
+    // Prompt to set Apps Script URL
+    const url = prompt('Apps Script Web App URL eingeben:');
+    if (url) {
+      localStorage.setItem('apps_script_url', url);
+      location.reload();
+    }
+    return;
+  }
+
+  try {
+    btn.textContent = '…';
+    await fetch(`${APPS_SCRIPT_URL}?sparrate=${encodeURIComponent(val)}`, { mode: 'no-cors' });
+    btn.textContent = '✓ Gespeichert';
+    btn.classList.add('saved');
+    setTimeout(() => { btn.textContent = 'Speichern'; btn.classList.remove('saved'); }, 2500);
+  } catch(e) {
+    btn.textContent = 'Fehler';
+    setTimeout(() => { btn.textContent = 'Speichern'; }, 2000);
+  }
+}
+
+// Init login on load
+initLogin();
 
 function showToast() {
   const t = document.getElementById('toast');
