@@ -353,6 +353,38 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+    /* ══ MOBILE COLLAPSE CARDS ══ */
+    .m-collapse-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      flex-direction: column;
+    }
+    .m-collapse-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; cursor: pointer; gap: 10px;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .m-collapse-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .m-collapse-icon { font-size: 18px; flex-shrink: 0; }
+    .m-collapse-text {
+      font-size: 14px; font-weight: 500; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .m-collapse-chevron {
+      font-size: 20px; color: var(--muted); flex-shrink: 0;
+      transition: transform 0.25s ease; line-height: 1;
+    }
+    .m-collapse-chevron.open { transform: rotate(90deg); }
+    .m-collapse-body {
+      border-top: 1px solid var(--border);
+      padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
     /* ══ MOBILE OVERRIDES ══ */
     @media (max-width: 768px) {
       .page { padding: 16px 16px env(safe-area-inset-bottom, 32px); gap: 14px; }
@@ -484,30 +516,45 @@
   <div class="nav-row" id="mobile-nav" style="display:none">
     <a href="abendroutine.html" class="nav-btn">🌙 Abendroutine</a>
     <a href="ernaehrungsplan.html" class="nav-btn">🥗 Ernährungsplan</a>
-    <a href="kohlenhydrate.html" class="nav-btn">🚴 Carbs Rechner</a>
+    <a href="kohlenhydrate.html" class="nav-btn">🚴 Carbs</a>
   </div>
 
-  <!-- ══ MOBILE WEATHER STRIP (only visible on mobile, after form) ══ -->
-  <div class="w-mobile-strip" id="mobile-weather">
-    <div id="mobile-skeleton" style="display:flex;gap:12px;align-items:center">
-      <div class="skeleton" style="width:80px;height:44px;border-radius:10px"></div>
-      <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-        <div class="skeleton" style="height:12px;width:120px"></div>
-        <div class="skeleton" style="height:10px;width:80px"></div>
+  <!-- ══ MOBILE WEATHER CARD (collapsible) ══ -->
+  <div class="m-collapse-card" id="mobile-weather" style="display:none">
+    <!-- Collapsed summary row -->
+    <div class="m-collapse-header" id="mobile-weather-header" onclick="toggleMobileCard('weather')">
+      <div class="m-collapse-left" id="mobile-weather-summary">
+        <span class="m-collapse-icon">🌡</span>
+        <span class="m-collapse-text" id="mobile-weather-pill">Wetter wird geladen…</span>
       </div>
-      <div class="skeleton" style="width:36px;height:36px;border-radius:10px"></div>
+      <span class="m-collapse-chevron" id="mobile-weather-chevron">›</span>
     </div>
-    <div id="mobile-weather-content" hidden></div>
+    <!-- Expanded full content -->
+    <div class="m-collapse-body" id="mobile-weather-body" hidden>
+      <div id="mobile-skeleton" style="display:flex;gap:12px;align-items:center;padding:4px 0">
+        <div class="skeleton" style="width:70px;height:36px;border-radius:8px"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+          <div class="skeleton" style="height:11px;width:110px"></div>
+          <div class="skeleton" style="height:10px;width:75px"></div>
+        </div>
+      </div>
+      <div id="mobile-weather-content" hidden></div>
+    </div>
   </div>
 
-  <!-- ══ MOBILE TRANSIT (only visible on mobile) ══ -->
-  <div class="transit-card" id="mobile-transit-card" style="display:none">
-    <div class="transit-header">
-      <div class="transit-title">🚇 ÖPNV Live</div>
-      <span class="transit-updated" id="mobile-transit-updated" onclick="loadTransit()">— aktualisieren</span>
+  <!-- ══ MOBILE TRANSIT CARD (collapsible) ══ -->
+  <div class="m-collapse-card" id="mobile-transit-card" style="display:none">
+    <div class="m-collapse-header" id="mobile-transit-header" onclick="toggleMobileCard('transit')">
+      <div class="m-collapse-left">
+        <span class="m-collapse-icon">🚇</span>
+        <span class="m-collapse-text" id="mobile-transit-pill">ÖPNV Live · lädt…</span>
+      </div>
+      <span class="m-collapse-chevron" id="mobile-transit-chevron">›</span>
     </div>
-    <div id="mobile-transit-content">
-      <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px">Lädt…</div>
+    <div class="m-collapse-body" id="mobile-transit-body" hidden>
+      <div id="mobile-transit-content">
+        <div style="font-size:12px;color:var(--muted);padding:6px 0">Lädt…</div>
+      </div>
     </div>
   </div>
 
@@ -516,16 +563,24 @@
 <div class="toast" id="toast">✓ Ausgabe eingetragen</div>
 
 <script>
-// ── Show mobile nav + transit on mobile
-if (window.innerWidth <= 768) {
-  document.getElementById('mobile-nav').style.display = 'grid';
-  document.getElementById('mobile-transit-card').style.display = 'flex';
-}
-window.addEventListener('resize', () => {
+// ── Show mobile elements
+function applyMobileLayout() {
   const mob = window.innerWidth <= 768;
-  document.getElementById('mobile-nav').style.display = mob ? 'grid' : 'none';
+  document.getElementById('mobile-nav').style.display          = mob ? 'grid' : 'none';
+  document.getElementById('mobile-weather').style.display      = mob ? 'flex' : 'none';
   document.getElementById('mobile-transit-card').style.display = mob ? 'flex' : 'none';
-});
+}
+applyMobileLayout();
+window.addEventListener('resize', applyMobileLayout);
+
+// ── Toggle mobile collapse cards
+function toggleMobileCard(id) {
+  const body    = document.getElementById(`mobile-${id}-body`);
+  const chevron = document.getElementById(`mobile-${id}-chevron`);
+  const isOpen  = !body.hidden;
+  body.hidden   = isOpen;
+  chevron.classList.toggle('open', !isOpen);
+}
 
 // ── Dark Mode
 const themeToggle = document.getElementById('theme-toggle');
@@ -720,6 +775,11 @@ async function loadWeather() {
     document.getElementById('mobile-skeleton').hidden = true;
     const mwc = document.getElementById('mobile-weather-content');
     mwc.innerHTML = mhtml; mwc.hidden = false;
+    // Update collapsed pill
+    const pill = document.getElementById('mobile-weather-pill');
+    if (pill) pill.textContent = `${tempNow}° ${WMO_ICON[wCode]||''} ${WMO[wCode]||''}`;
+    const pillIcon = document.querySelector('#mobile-weather-header .m-collapse-icon');
+    if (pillIcon) pillIcon.textContent = WMO_ICON[wCode] || '🌡';
 
   } catch(e) {
     document.getElementById('weather-skeleton').innerHTML =
@@ -1031,7 +1091,25 @@ async function loadTransit() {
     const mContent = document.getElementById('mobile-transit-content');
     const mUpdated = document.getElementById('mobile-transit-updated');
     if (mContent) mContent.innerHTML = html;
-    if (mUpdated) mUpdated.textContent = `Aktualisiert ${timeStr} · klicken`;
+
+    // Update mobile pill: show next inward departure for each station
+    const pill = document.getElementById('mobile-transit-pill');
+    if (pill) {
+      const parts = [];
+      STATIONS.forEach((s, i) => {
+        const deps = results[i] || [];
+        const next = deps.filter(s.inward.filter)[0];
+        if (next) {
+          const raw = next.realtimeDepartureTime || next.plannedDepartureTime || 0;
+          const depMs = raw > 1e10 ? raw : raw * 1000;
+          const diff = Math.round((depMs - Date.now()) / 60000);
+          const timeLabel = diff <= 0 ? 'Jetzt' : diff + ' min';
+          const badge = s.badge === 'u' ? 'U1' : (next.label || '');
+          parts.push(`${badge} ${timeLabel}`);
+        }
+      });
+      pill.textContent = parts.length > 0 ? parts.join(' · ') : 'ÖPNV Live';
+    }
   } catch(e) {
     content.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 0">
       ⚙️ Cloudflare Worker nicht konfiguriert<br>
