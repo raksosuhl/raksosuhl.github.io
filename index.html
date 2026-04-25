@@ -396,6 +396,16 @@
       .date-label { font-size: 11px; }
       .card { padding: 18px; gap: 16px; }
       .w-mobile-stats { grid-template-columns: repeat(2, 1fr); }
+
+      /* hide form extras until first amount button pressed */
+      #mobile-form-extra,
+      #suggestion-block,
+      #desc-block,
+      .date-chip,
+      #submit-btn { display: none; }
+      #mobile-form-extra.mobile-visible { display: flex; flex-direction: column; gap: 8px; }
+      .date-chip.mobile-visible { display: inline-flex; }
+      #submit-btn.mobile-visible { display: block; }
     }
   </style>
 </head>
@@ -443,7 +453,7 @@
         <span class="field-error" id="betrag-err" hidden>Bitte einen Betrag eingeben.</span>
       </div>
 
-      <div class="cat-block">
+      <div class="cat-block" id="mobile-form-extra">
         <label>Kategorie</label>
         <div class="cat-grid">
           <button class="cat-btn" data-cat="Essen">     <span class="icon">🍽️</span> Essen</button>
@@ -577,9 +587,20 @@ window.addEventListener('resize', applyMobileLayout);
 function toggleMobileCard(id) {
   const body    = document.getElementById(`mobile-${id}-body`);
   const chevron = document.getElementById(`mobile-${id}-chevron`);
+  if (!body || !chevron) return;
   const isOpen  = !body.hidden;
   body.hidden   = isOpen;
   chevron.classList.toggle('open', !isOpen);
+}
+
+// ── Reveal mobile form extras on first amount button press
+let mobileFormRevealed = false;
+function revealMobileForm() {
+  if (mobileFormRevealed || window.innerWidth > 768) return;
+  mobileFormRevealed = true;
+  document.getElementById('mobile-form-extra').classList.add('mobile-visible');
+  document.querySelector('.date-chip').classList.add('mobile-visible');
+  document.getElementById('submit-btn').classList.add('mobile-visible');
 }
 
 // ── Dark Mode
@@ -838,9 +859,11 @@ document.querySelectorAll('.quick-btn[data-val]').forEach(btn => {
     accCents += Math.round(parseFloat(btn.dataset.val) * 100);
     updateAmtDisplay();
     document.getElementById('betrag-err').hidden = true;
+    revealMobileForm();
   });
 });
 document.getElementById('del-btn').addEventListener('click', () => { accCents = 0; updateAmtDisplay(); });
+document.getElementById('betrag').addEventListener('input', () => revealMobileForm());
 
 const today  = new Date();
 const dayNum = today.getDate();
@@ -932,6 +955,13 @@ document.getElementById('submit-btn').addEventListener('click', () => {
     chipRow.innerHTML=''; suggestionBlock.hidden=true; descBlock.hidden=true;
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
     selectedCat=null; selectedChip=null;
+    // Reset mobile form
+    mobileFormRevealed = false;
+    if (window.innerWidth <= 768) {
+      document.getElementById('mobile-form-extra').classList.remove('mobile-visible');
+      document.querySelector('.date-chip').classList.remove('mobile-visible');
+      document.getElementById('submit-btn').classList.remove('mobile-visible');
+    }
     showToast();
   }, 300);
 });
