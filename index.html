@@ -1496,7 +1496,7 @@ async function doBiometric() {
 // ══════════════════════════════════════════
 // ── GOOGLE SHEETS
 // ══════════════════════════════════════════
-const SHEETS_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVvTiUbd-9gQBaui310DQVRglT85CYjuNxB5KRtRWTNZBEBnrEtoMI58I2_vi8qPz8oGCmgaf1Rjo9/pubhtml?gid=453242315&single=true&chrome=false&widget=false&headers=false&range=';
+const SHEETS_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVvTiUbd-9gQBaui310DQVRglT85CYjuNxB5KRtRWTNZBEBnrEtoMI58I2_vi8qPz8oGCmgaf1Rjo9/pubhtml?gid=965386565&single=true&chrome=false&widget=false&headers=false&range=';
 const APPS_SCRIPT_URL = localStorage.getItem('apps_script_url') || '';
 
 async function fetchCell(range) {
@@ -1524,7 +1524,8 @@ async function loadSheets() {
       dailySub.textContent = daily >= 0 ? 'noch verfügbar heute' : 'überzogen heute';
     } else {
       dailyEl.textContent  = rawDaily || '—';
-      dailySub.textContent = 'Wert aus Tabelle';
+      dailyEl.className    = 'sheets-val';
+      dailySub.textContent = rawDaily ? `Rohwert: "${rawDaily}" – Parsing-Fehler` : 'Zelle leer oder falsche gid';
     }
 
     // Parse sparrate (L47)
