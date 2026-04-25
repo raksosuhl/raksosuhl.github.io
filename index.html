@@ -1017,15 +1017,13 @@ function isInward_U1(dest) {
   return inward.some(t => dest.includes(t));
 }
 
-// Tram 20/21 an der Sandstraße:
-// 20 Richtung Karlsplatz/Stachus = stadteinwärts
-// 20 Richtung Moosach/Dachauer Str. = stadtauswärts
-// 21 Richtung Westfriedhof = stadtauswärts
-// 21 Richtung Maxvorstadt/Stachus = stadteinwärts
+// Tram an Sandstraße:
+// Stadteinwärts: 21 → St.-Veit-Str., 20 → Karlsplatz
+// Stadtauswärts: 21 → Westfriedhof,  20 → Moosach
 function isInward_Tram(dest) {
   if (!dest) return false;
-  const outward = ['Westfriedhof','Moosach','Dachauer','Leonrodplatz','Amalienburg','Romanplatz','Pasing'];
-  const inward  = ['Karlsplatz','Stachus','Sendlinger','Isartor','Wienerplatz','Schwabing','Max-Weber'];
+  const inward  = ['St.-Veit','St. Veit','Veit','Karlsplatz','Stachus'];
+  const outward = ['Westfriedhof','Moosach'];
   if (outward.some(t => dest.includes(t))) return false;
   if (inward.some(t => dest.includes(t))) return true;
   return false;
@@ -1098,13 +1096,15 @@ function renderStation(station, deps) {
   let inDeps  = deps.filter(station.inward.filter).slice(0, 3);
   let outDeps = deps.filter(station.outward.filter).slice(0, 2);
 
-  // If no departures at all from filters, show first 4 unfiltered so we can see what's there
-  const fallback = inDeps.length === 0 && outDeps.length === 0 && deps.length > 0;
-  if (fallback) inDeps = deps.slice(0, 4);
+  // Fallback: if filters catch nothing at all, show unfiltered
+  if (inDeps.length === 0 && outDeps.length === 0 && deps.length > 0) {
+    inDeps = deps.slice(0, 4);
+  }
 
+  const sid = station.name.replace(/\s/g,'_');
   let html = `<div class="transit-station-name">${station.name}</div>`;
 
-  // Inward
+  // Inward – always visible
   html += `<div class="t-section">`;
   html += `<div class="transit-dir-label">${station.inward.label}</div>`;
   if (inDeps.length === 0) {
@@ -1112,31 +1112,29 @@ function renderStation(station, deps) {
   } else {
     inDeps.forEach(d => {
       const raw = d.realtimeDepartureTime || d.plannedDepartureTime || 0;
-      const depMs = raw > 1e10 ? raw : raw * 1000; // handle both ms and seconds
+      const depMs = raw > 1e10 ? raw : raw * 1000;
       const { label, cls } = fmtMin(depMs);
       const hbfArr = new Date(depMs + station.inward.hbfMin * 60000);
       const hbfStr = hbfArr.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
       html += `<div class="transit-dep-row">
         <span class="t-badge ${station.badge}">${d.label}</span>
         <span class="t-dest">${d.destination}</span>
-        <span class="t-times">
-          <span class="t-min ${cls}">${label}</span>
-        </span>
+        <span class="t-times"><span class="t-min ${cls}">${label}</span></span>
         <span class="t-hbf">Hbf ~${hbfStr}</span>
       </div>`;
     });
   }
   html += `</div>`;
 
-  // Divider
-  html += `<div class="t-divider"></div>`;
-
-  // Outward
-  html += `<div class="t-section">`;
-  html += `<div class="transit-dir-label">${station.outward.label}</div>`;
-  if (outDeps.length === 0) {
-    html += `<div style="font-size:12px;color:var(--muted);padding:4px 0">Keine Abfahrten</div>`;
-  } else {
+  // Outward – hidden behind toggle button
+  if (outDeps.length > 0) {
+    html += `<div>
+      <button onclick="var b=document.getElementById('out-${sid}');b.hidden=!b.hidden;this.textContent=b.hidden?'▼ Stadtauswärts':'▲ Stadtauswärts einklappen'"
+        style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 0;font-family:inherit">
+        ▼ Stadtauswärts
+      </button>
+      <div id="out-${sid}" hidden style="margin-top:6px">
+        <div class="transit-dir-label" style="margin-bottom:4px">${station.outward.label}</div>`;
     outDeps.forEach(d => {
       const raw = d.realtimeDepartureTime || d.plannedDepartureTime || 0;
       const depMs = raw > 1e10 ? raw : raw * 1000;
@@ -1147,8 +1145,8 @@ function renderStation(station, deps) {
         <span class="t-times"><span class="t-min ${cls}">${label}</span></span>
       </div>`;
     });
+    html += `</div></div>`;
   }
-  html += `</div>`;
 
   return html;
 }
