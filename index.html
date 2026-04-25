@@ -1121,19 +1121,17 @@ async function fetchDepartures(station) {
   throw new Error('No departures for ' + station.name);
 }
 
-function renderStation(station, deps) {
+function renderStation(station, deps, prefix='') {
   let inDeps  = deps.filter(station.inward.filter).slice(0, 3);
   let outDeps = deps.filter(station.outward.filter).slice(0, 2);
 
-  // Fallback: if filters catch nothing at all, show unfiltered
   if (inDeps.length === 0 && outDeps.length === 0 && deps.length > 0) {
     inDeps = deps.slice(0, 4);
   }
 
-  const sid = station.name.replace(/\s/g,'_');
+  const sid = prefix + station.name.replace(/\s/g,'_');
   let html = `<div class="transit-station-name">${station.name}</div>`;
 
-  // Inward – always visible
   html += `<div class="t-section">`;
   html += `<div class="transit-dir-label">${station.inward.label}</div>`;
   if (inDeps.length === 0) {
@@ -1155,7 +1153,6 @@ function renderStation(station, deps) {
   }
   html += `</div>`;
 
-  // Outward – hidden behind toggle button
   if (outDeps.length > 0) {
     html += `<div>
       <button onclick="var b=document.getElementById('out-${sid}');b.hidden=!b.hidden;this.textContent=b.hidden?'▼ Stadtauswärts':'▲ Stadtauswärts einklappen'"
@@ -1194,7 +1191,7 @@ async function loadTransit() {
     STATIONS.forEach((s, i) => {
       if (i > 0) html += `<div class="t-divider" style="margin:10px 0"></div>`;
       const deps = results[i];
-      html += renderStation(s, Array.isArray(deps) ? deps : (deps.departures || []));
+      html += renderStation(s, Array.isArray(deps) ? deps : (deps.departures || []), 'desk_');
     });
 
     content.innerHTML = html;
@@ -1202,10 +1199,15 @@ async function loadTransit() {
     const timeStr = now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
     updated.textContent = `Aktualisiert ${timeStr} · klicken`;
 
-    // Also render to mobile
+    // Mobile – render with different prefix to avoid duplicate IDs
+    let mhtml = '';
+    STATIONS.forEach((s, i) => {
+      if (i > 0) mhtml += `<div class="t-divider" style="margin:10px 0"></div>`;
+      const deps = results[i];
+      mhtml += renderStation(s, Array.isArray(deps) ? deps : (deps.departures || []), 'mob_');
+    });
     const mContent = document.getElementById('mobile-transit-content');
-    const mUpdated = document.getElementById('mobile-transit-updated');
-    if (mContent) mContent.innerHTML = html;
+    if (mContent) mContent.innerHTML = mhtml;
 
     // Update mobile pill: show next inward departure for each station
     const pill = document.getElementById('mobile-transit-pill');
