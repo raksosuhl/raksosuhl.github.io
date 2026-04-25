@@ -987,27 +987,50 @@ async function mvgFetch(url) {
   return await res.json();
 }
 
-// Cache station IDs
+// Known IDs as fallback – resolved by testing the API
+const KNOWN_IDS = {
+  'Stiglmaierplatz': null, // will be resolved dynamically
+  'Sandstraße': null,
+};
 const stationIdCache = {};
 
 async function resolveStationId(query) {
   if (stationIdCache[query]) return stationIdCache[query];
-  const locations = await mvgFetch(`https://www.mvg.de/api/fib/v2/location?query=${encodeURIComponent(query)}`);
-  if (!Array.isArray(locations) || locations.length === 0) throw new Error('Station not found: ' + query);
-  // Pick first result that is a station
-  const station = locations.find(l => l.type === 'STATION' || l.globalId) || locations[0];
-  const id = station.globalId || station.id;
-  if (!id) throw new Error('No globalId for ' + query);
-  stationIdCache[query] = id;
-  return id;
+
+  // Try new v3 endpoint first, then v2 as fallback
+  const endpoints = [
+    `https://www.mvg.de/api/bgw-pt/v3/locations?query=${encodeURIComponent(query)}&locationTypes=STATION`,
+    `https://www.mvg.de/api/fib/v2/location?query=${encodeURIComponent(query)}`,
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const data = await mvgFetch(url);
+      const list = Array.isArray(data) ? data : (data.locations || data.content || []);
+      if (!list.length) continue;
+      const station = list.find(l => l.globalId || l.id) || list[0];
+      const id = station.globalId || station.id;
+      if (id) { stationIdCache[query] = id; return id; }
+    } catch(e) { continue; }
+  }
+  throw new Error('Station not found: ' + query);
 }
 
 async function fetchDepartures(station) {
   const globalId = await resolveStationId(station.query);
-  const data = await mvgFetch(
-    `https://www.mvg.de/api/fib/v2/departure?globalId=${globalId}&limit=20&transportTypes=${station.type}`
-  );
-  return Array.isArray(data) ? data : (data.departures || data);
+  // Try both departure API versions
+  const depUrls = [
+    `https://www.mvg.de/api/bgw-pt/v3/departures?globalId=${globalId}&limit=20&transportTypes=${station.type}`,
+    `https://www.mvg.de/api/fib/v2/departure?globalId=${globalId}&limit=20&transportTypes=${station.type}`,
+  ];
+  for (const url of depUrls) {
+    try {
+      const data = await mvgFetch(url);
+      const deps = Array.isArray(data) ? data : (data.departures || data.content || data);
+      if (Array.isArray(deps) && deps.length >= 0) return deps;
+    } catch(e) { continue; }
+  }
+  throw new Error('No departures for ' + station.name);
 }
 
 function renderStation(station, deps) {
