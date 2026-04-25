@@ -401,9 +401,13 @@
 
     /* ══ FORM PROGRESSIVE REVEAL (all screen sizes) ══ */
     #mobile-form-extra,
+    #suggestion-block,
+    #desc-block,
     .date-chip,
     #submit-btn { display: none; }
     #mobile-form-extra.mobile-visible { display: flex; flex-direction: column; gap: 8px; }
+    #suggestion-block.mobile-visible { display: block; }
+    #desc-block.mobile-visible { display: block; }
     .date-chip.mobile-visible { display: inline-flex; }
     #submit-btn.mobile-visible { display: block; }
 
@@ -546,16 +550,16 @@
       </div>
     </div>
 
-  <!-- ══ MOBILE TRANSIT CARD (collapsible) ══ -->
+  <!-- ══ MOBILE TRANSIT CARD (collapsible, starts open) ══ -->
   <div class="m-collapse-card" id="mobile-transit-card" style="display:none">
     <div class="m-collapse-header" id="mobile-transit-header" onclick="toggleMobileCard('transit')">
       <div class="m-collapse-left">
         <span class="m-collapse-icon">🚇</span>
         <span class="m-collapse-text" id="mobile-transit-pill">ÖPNV Live · lädt…</span>
       </div>
-      <span class="m-collapse-chevron" id="mobile-transit-chevron">›</span>
+      <span class="m-collapse-chevron open" id="mobile-transit-chevron">›</span>
     </div>
-    <div class="m-collapse-body" id="mobile-transit-body" hidden>
+    <div class="m-collapse-body" id="mobile-transit-body">
       <div id="mobile-transit-content">
         <div style="font-size:12px;color:var(--muted);padding:6px 0">Lädt…</div>
       </div>
@@ -933,28 +937,32 @@ function updateDescUI() {
   chipRow.innerHTML = ''; selectedChip = null;
   beschreibung.value = ''; beschreibung.removeAttribute('readonly');
   if (selectedCat === 'Essen' || selectedCat === 'Drogerie') {
-    suggestionBlock.hidden = true; descBlock.hidden = true; return;
+    suggestionBlock.classList.remove('mobile-visible');
+    descBlock.classList.remove('mobile-visible');
+    return;
   }
   if (suggestions && suggestions.length > 0) {
-    suggestionBlock.hidden = false; descBlock.hidden = false;
+    suggestionBlock.classList.add('mobile-visible');
+    descBlock.classList.add('mobile-visible');
     suggestions.forEach(({label, icon}) => {
       const chip = document.createElement('button');
       chip.className = 'chip'; chip.innerHTML = `${icon} ${label}`;
       chip.addEventListener('click', () => {
         if (selectedChip === label) {
           chip.classList.remove('active'); selectedChip = null;
-          beschreibung.value = ''; descBlock.hidden = false;
+          beschreibung.value = ''; descBlock.classList.add('mobile-visible');
         } else {
           document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
           chip.classList.add('active'); selectedChip = label;
-          beschreibung.value = label; descBlock.hidden = true;
+          beschreibung.value = label; descBlock.classList.remove('mobile-visible');
         }
       });
       chipRow.appendChild(chip);
     });
     return;
   }
-  suggestionBlock.hidden = true; descBlock.hidden = false;
+  suggestionBlock.classList.remove('mobile-visible');
+  descBlock.classList.add('mobile-visible');
 }
 
 document.getElementById('submit-btn').addEventListener('click', () => {
@@ -994,7 +1002,9 @@ document.getElementById('submit-btn').addEventListener('click', () => {
   setTimeout(() => {
     betragInput.value=''; accCents=0; updateAmtDisplay();
     beschreibung.value=''; beschreibung.removeAttribute('readonly');
-    chipRow.innerHTML=''; suggestionBlock.hidden=true; descBlock.hidden=true;
+    chipRow.innerHTML='';
+    suggestionBlock.classList.remove('mobile-visible');
+    descBlock.classList.remove('mobile-visible');
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
     selectedCat=null; selectedChip=null;
     mobileFormRevealed = false;
