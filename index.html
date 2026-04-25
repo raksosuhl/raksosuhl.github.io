@@ -888,27 +888,17 @@ function fmtMin(depTimestampMs) {
 }
 
 async function fetchDepartures(globalId, transportType) {
+  // Cloudflare Worker Proxy (einmalig einrichten – siehe unten)
+  // Ersetze DEINE-SUBDOMAIN mit deinem Cloudflare-Worker-Namen
+  const WORKER_URL = 'https://mvg-proxy.oskarherkt.workers.dev';
   const url = `https://www.mvg.de/api/fib/v2/departure?globalId=${globalId}&limit=20&transportTypes=${transportType}`;
-  const proxies = [
-    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-    u => `https://thingproxy.freeboard.io/fetch/${u}`,
-  ];
 
-  for (const proxy of proxies) {
-    try {
-      const res = await fetch(proxy(url), { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) continue;
-      const text = await res.text();
-      const data = JSON.parse(text);
-      // API returns either array or object with departures key
-      return Array.isArray(data) ? data : (data.departures || data);
-    } catch(e) {
-      continue;
-    }
-  }
-  throw new Error('All proxies failed');
+  const res = await fetch(`${WORKER_URL}/?url=${encodeURIComponent(url)}`, {
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.departures || data);
 }
 
 function renderStation(station, deps) {
@@ -987,8 +977,9 @@ async function loadTransit() {
     const now = new Date();
     updated.textContent = `Aktualisiert ${now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} · klicken`;
   } catch(e) {
-    content.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0">
-      ⚠️ MVG-Daten nicht verfügbar<br><span style="font-size:11px">CORS-Block im Browser – funktioniert lokal oder mit Extension</span>
+    content.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 0">
+      ⚙️ Cloudflare Worker nicht konfiguriert<br>
+      <span style="font-size:11px">Siehe Setup-Anleitung im Code · WORKER_URL anpassen</span>
     </div>`;
     updated.textContent = 'Fehler · erneut klicken';
   }
