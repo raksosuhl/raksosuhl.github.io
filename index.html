@@ -881,23 +881,20 @@ document.getElementById('submit-btn').addEventListener('click', () => {
 // Travel times from these stations to Hbf (U-Bahn: ~3min, Tram 16/17: ~6min)
 const STATIONS = [
   {
-    id: 'de:09162:540',
     name: 'Stiglmaierplatz',
+    query: 'Stiglmaierplatz',
     type: 'UBAHN',
     badge: 'u',
-    // U1 toward Hbf: destination contains "Hauptbahnhof" or "Innsbrucker" etc
-    // U1 stadteinwärts = Richtung Hauptbahnhof / Sendlinger Tor / Olympia
-    // U1 stadtauswärts = Richtung OEZ / Moosach
-    inward: { label: '→ Stadt · Hbf', hbfMin: 3, filter: d => d.label==='U1' && isInward_U1(d.destination) },
-    outward:{ label: '→ Stadtauswärts', filter: d => d.label==='U1' && !isInward_U1(d.destination) },
+    inward:  { label: '→ Stadt · Hbf', hbfMin: 3,  filter: d => d.label==='U1' && isInward_U1(d.destination) },
+    outward: { label: '→ Stadtauswärts',            filter: d => d.label==='U1' && !isInward_U1(d.destination) },
   },
   {
-    id: 'de:09162:542',
     name: 'Sandstraße',
+    query: 'Sandstraße',
     type: 'TRAM',
     badge: 't',
-    inward: { label: '→ Stadt · Hbf', hbfMin: 6, filter: d => (d.label==='16'||d.label==='17') && isInward_Tram(d.destination) },
-    outward:{ label: '→ Stadtauswärts', filter: d => (d.label==='16'||d.label==='17') && !isInward_Tram(d.destination) },
+    inward:  { label: '→ Stadt · Hbf', hbfMin: 6,  filter: d => (d.label==='16'||d.label==='17') && isInward_Tram(d.destination) },
+    outward: { label: '→ Stadtauswärts',            filter: d => (d.label==='16'||d.label==='17') && !isInward_Tram(d.destination) },
   },
 ];
 
@@ -920,17 +917,36 @@ function fmtMin(depTimestampMs) {
   return { label: diff + ' min', cls: '' };
 }
 
-async function fetchDepartures(globalId, transportType) {
-  // Cloudflare Worker Proxy (einmalig einrichten – siehe unten)
-  // Ersetze DEINE-SUBDOMAIN mit deinem Cloudflare-Worker-Namen
-  const WORKER_URL = 'https://mvg-proxy.oskarherkt.workers.dev';
-  const url = `https://www.mvg.de/api/fib/v2/departure?globalId=${globalId}&limit=20&transportTypes=${transportType}`;
+const WORKER_URL = 'https://mvg-proxy.oskarherkt.workers.dev';
 
+async function mvgFetch(url) {
   const res = await fetch(`${WORKER_URL}/?url=${encodeURIComponent(url)}`, {
     signal: AbortSignal.timeout(8000)
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
+  return await res.json();
+}
+
+// Cache station IDs
+const stationIdCache = {};
+
+async function resolveStationId(query) {
+  if (stationIdCache[query]) return stationIdCache[query];
+  const locations = await mvgFetch(`https://www.mvg.de/api/fib/v2/location?query=${encodeURIComponent(query)}`);
+  if (!Array.isArray(locations) || locations.length === 0) throw new Error('Station not found: ' + query);
+  // Pick first result that is a station
+  const station = locations.find(l => l.type === 'STATION' || l.globalId) || locations[0];
+  const id = station.globalId || station.id;
+  if (!id) throw new Error('No globalId for ' + query);
+  stationIdCache[query] = id;
+  return id;
+}
+
+async function fetchDepartures(station) {
+  const globalId = await resolveStationId(station.query);
+  const data = await mvgFetch(
+    `https://www.mvg.de/api/fib/v2/departure?globalId=${globalId}&limit=20&transportTypes=${station.type}`
+  );
   return Array.isArray(data) ? data : (data.departures || data);
 }
 
@@ -996,7 +1012,7 @@ async function loadTransit() {
 
   try {
     const results = await Promise.all(
-      STATIONS.map(s => fetchDepartures(s.id, s.type))
+      STATIONS.map(s => fetchDepartures(s))
     );
 
     let html = '';
