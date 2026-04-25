@@ -401,8 +401,6 @@
 
     /* ══ FORM PROGRESSIVE REVEAL (all screen sizes) ══ */
     #mobile-form-extra,
-    #suggestion-block,
-    #desc-block,
     .date-chip,
     #submit-btn { display: none; }
     #mobile-form-extra.mobile-visible { display: flex; flex-direction: column; gap: 8px; }
@@ -548,29 +546,6 @@
       </div>
     </div>
 
-  <!-- ══ MOBILE WEATHER CARD (collapsible) ══ -->
-  <div class="m-collapse-card" id="mobile-weather" style="display:none">
-    <!-- Collapsed summary row -->
-    <div class="m-collapse-header" id="mobile-weather-header" onclick="toggleMobileCard('weather')">
-      <div class="m-collapse-left" id="mobile-weather-summary">
-        <span class="m-collapse-icon">🌡</span>
-        <span class="m-collapse-text" id="mobile-weather-pill">Wetter wird geladen…</span>
-      </div>
-      <span class="m-collapse-chevron" id="mobile-weather-chevron">›</span>
-    </div>
-    <!-- Expanded full content -->
-    <div class="m-collapse-body" id="mobile-weather-body" hidden>
-      <div id="mobile-skeleton" style="display:flex;gap:12px;align-items:center;padding:4px 0">
-        <div class="skeleton" style="width:70px;height:36px;border-radius:8px"></div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:5px">
-          <div class="skeleton" style="height:11px;width:110px"></div>
-          <div class="skeleton" style="height:10px;width:75px"></div>
-        </div>
-      </div>
-      <div id="mobile-weather-content" hidden></div>
-    </div>
-  </div>
-
   <!-- ══ MOBILE TRANSIT CARD (collapsible) ══ -->
   <div class="m-collapse-card" id="mobile-transit-card" style="display:none">
     <div class="m-collapse-header" id="mobile-transit-header" onclick="toggleMobileCard('transit')">
@@ -584,6 +559,27 @@
       <div id="mobile-transit-content">
         <div style="font-size:12px;color:var(--muted);padding:6px 0">Lädt…</div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ MOBILE WEATHER CARD (collapsible) ══ -->
+  <div class="m-collapse-card" id="mobile-weather" style="display:none">
+    <div class="m-collapse-header" id="mobile-weather-header" onclick="toggleMobileCard('weather')">
+      <div class="m-collapse-left" id="mobile-weather-summary">
+        <span class="m-collapse-icon">🌡</span>
+        <span class="m-collapse-text" id="mobile-weather-pill">Wetter wird geladen…</span>
+      </div>
+      <span class="m-collapse-chevron" id="mobile-weather-chevron">›</span>
+    </div>
+    <div class="m-collapse-body" id="mobile-weather-body" hidden>
+      <div id="mobile-skeleton" style="display:flex;gap:12px;align-items:center;padding:4px 0">
+        <div class="skeleton" style="width:70px;height:36px;border-radius:8px"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+          <div class="skeleton" style="height:11px;width:110px"></div>
+          <div class="skeleton" style="height:10px;width:75px"></div>
+        </div>
+      </div>
+      <div id="mobile-weather-content" hidden></div>
     </div>
   </div>
 
