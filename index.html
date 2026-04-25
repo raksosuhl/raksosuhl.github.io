@@ -975,29 +975,39 @@ const STATIONS = [
     query: 'Stiglmaierplatz',
     type: 'UBAHN',
     badge: 'u',
-    inward:  { label: '→ Stadt · Hbf', hbfMin: 3,  filter: d => d.label==='U1' && isInward_U1(d.destination) },
-    outward: { label: '→ Stadtauswärts',            filter: d => d.label==='U1' && !isInward_U1(d.destination) },
+    inward:  { label: '→ Stadt · Hbf', hbfMin: 3, filter: d => isInward_U1(d.destination) },
+    outward: { label: '→ Stadtauswärts',           filter: d => !isInward_U1(d.destination) },
   },
   {
     name: 'Sandstraße',
-    query: 'Sandstraße',
+    query: 'Sandstraße, München',
     type: 'TRAM',
     badge: 't',
-    inward:  { label: '→ Stadt · Hbf', hbfMin: 6,  filter: d => (d.label==='16'||d.label==='17') && isInward_Tram(d.destination) },
-    outward: { label: '→ Stadtauswärts',            filter: d => (d.label==='16'||d.label==='17') && !isInward_Tram(d.destination) },
+    // Tram 16 → Stachus/Schwabing = stadteinwärts; Tram 17 → Amalienburgstraße = stadtauswärts
+    inward:  { label: '→ Stadt · Hbf', hbfMin: 6, filter: d => isInward_Tram(d.destination) },
+    outward: { label: '→ Stadtauswärts',           filter: d => !isInward_Tram(d.destination) },
   },
 ];
 
-// U1 inward destinations (toward city center / Hbf)
+// U1 inward: Mangfallplatz/Ostbahnhof/Riem direction = stadteinwärts durch Hbf
 function isInward_U1(dest) {
-  const inwardTermini = ['Hauptbahnhof','Mangfallplatz','Ostbahnhof','Riem','Messestadt','Fröttmaning','Garching'];
-  return inwardTermini.some(t => dest && dest.includes(t));
+  if (!dest) return false;
+  const inward = ['Mangfallplatz','Ostbahnhof','Riem','Messestadt','Fröttmaning','Garching','Hauptbahnhof'];
+  return inward.some(t => dest.includes(t));
 }
 
-// Tram 16/17 inward = toward Hbf / Stachus / Scheidplatz direction
+// Tram 16/17 at Sandstraße: inward = toward Stachus/Schwabing (16 Richtung Schwabing, 17 Richtung Amalienburgstraße)
+// 16 stadteinwärts → Schwabing Nord / Münchner Freiheit
+// 16 stadtauswärts → Romanplatz / Amalienburgstraße
+// 17 stadteinwärts → Schwanseestraße / Johanneskirchen  
+// 17 stadtauswärts → Amalienburgstraße
 function isInward_Tram(dest) {
-  const inwardTermini = ['Hauptbahnhof','Stachus','Scheidplatz','Romanplatz','St.','Amalienburg'];
-  return inwardTermini.some(t => dest && dest.includes(t));
+  if (!dest) return false;
+  const inward = ['Schwabing','Münchner Freiheit','Schwanseestraße','Johanneskirchen','Effnerplatz','Bosch'];
+  const outward = ['Romanplatz','Amalienburg','Moosach','Pasing'];
+  if (outward.some(t => dest.includes(t))) return false;
+  if (inward.some(t => dest.includes(t))) return true;
+  return false; // unknown → show as outward
 }
 
 function fmtMin(depTimestampMs) {
@@ -1064,8 +1074,12 @@ async function fetchDepartures(station) {
 }
 
 function renderStation(station, deps) {
-  const inDeps  = deps.filter(station.inward.filter).slice(0, 3);
-  const outDeps = deps.filter(station.outward.filter).slice(0, 2);
+  let inDeps  = deps.filter(station.inward.filter).slice(0, 3);
+  let outDeps = deps.filter(station.outward.filter).slice(0, 2);
+
+  // If no departures at all from filters, show first 4 unfiltered so we can see what's there
+  const fallback = inDeps.length === 0 && outDeps.length === 0 && deps.length > 0;
+  if (fallback) inDeps = deps.slice(0, 4);
 
   let html = `<div class="transit-station-name">${station.name}</div>`;
 
