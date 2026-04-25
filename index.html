@@ -500,17 +500,31 @@
     <div id="mobile-weather-content" hidden></div>
   </div>
 
+  <!-- ══ MOBILE TRANSIT (only visible on mobile) ══ -->
+  <div class="transit-card" id="mobile-transit-card" style="display:none">
+    <div class="transit-header">
+      <div class="transit-title">🚇 ÖPNV Live</div>
+      <span class="transit-updated" id="mobile-transit-updated" onclick="loadTransit()">— aktualisieren</span>
+    </div>
+    <div id="mobile-transit-content">
+      <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px">Lädt…</div>
+    </div>
+  </div>
+
 </div>
 
 <div class="toast" id="toast">✓ Ausgabe eingetragen</div>
 
 <script>
-// ── Show mobile nav on mobile
+// ── Show mobile nav + transit on mobile
 if (window.innerWidth <= 768) {
   document.getElementById('mobile-nav').style.display = 'grid';
+  document.getElementById('mobile-transit-card').style.display = 'flex';
 }
 window.addEventListener('resize', () => {
-  document.getElementById('mobile-nav').style.display = window.innerWidth <= 768 ? 'grid' : 'none';
+  const mob = window.innerWidth <= 768;
+  document.getElementById('mobile-nav').style.display = mob ? 'grid' : 'none';
+  document.getElementById('mobile-transit-card').style.display = mob ? 'flex' : 'none';
 });
 
 // ── Dark Mode
@@ -572,10 +586,16 @@ function uvLabel(uv) {
   return { text:'Extrem', high:true };
 }
 
+function windDirArrow(deg) {
+  // Arrow points in the direction wind is blowing TO
+  const dirs = ['↑','↗','→','↘','↓','↙','←','↖'];
+  return dirs[Math.round(deg / 45) % 8];
+}
+
 async function loadWeather() {
   try {
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=48.1374&longitude=11.5755' +
-      '&current=temperature_2m,weathercode,windspeed_10m,uv_index,precipitation' +
+      '&current=temperature_2m,weathercode,windspeed_10m,winddirection_10m,uv_index,precipitation' +
       '&hourly=temperature_2m,precipitation_probability,weathercode' +
       '&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weathercode' +
       '&timezone=Europe%2FBerlin&forecast_days=2';
@@ -591,6 +611,8 @@ async function loadWeather() {
     const rainTomorrow = daily.precipitation_probability_max[1];
     const rainSum      = daily.precipitation_sum[0];
     const wind         = Math.round(cur.windspeed_10m);
+    const windDir      = cur.winddirection_10m || 0;
+    const windArrow    = windDirArrow(windDir);
     const uv           = Math.round(cur.uv_index);
     const uvL          = uvLabel(uv);
     const tMax         = Math.round(daily.temperature_2m_max[0]);
@@ -618,7 +640,7 @@ async function loadWeather() {
     </div>
     <div class="w-stats">
       <div class="w-stat"><span class="w-stat-label">Hoch</span><span class="w-stat-val">${tMax}°</span><span class="w-stat-sub">Tief ${tMin}°</span></div>
-      <div class="w-stat"><span class="w-stat-label">Wind</span><span class="w-stat-val">${wind}</span><span class="w-stat-sub">km/h</span></div>
+      <div class="w-stat"><span class="w-stat-label">Wind</span><span class="w-stat-val">${windArrow} ${wind}</span><span class="w-stat-sub">km/h</span></div>
       <div class="w-stat"><span class="w-stat-label">UV</span><span class="w-stat-val">${uv}</span><span class="w-stat-sub">${uvL.text}</span></div>
       <div class="w-stat"><span class="w-stat-label">Regen heute</span><span class="w-stat-val">${rainToday}%</span><span class="w-stat-sub">${rainSum>0?rainSum.toFixed(1)+' mm':'kein'}</span></div>
     </div>
@@ -628,7 +650,13 @@ async function loadWeather() {
     if (rainToday < 30 && rainTomorrow < 30) html += `<div class="w-alert wind" style="background:var(--bg);color:var(--muted)">✅ Kein Regen heute oder morgen</div>`;
     if (wind >= 30)         html += `<div class="w-alert wind">💨 Wind · ${wind} km/h</div>`;
     html += `<div class="w-alert uv ${uvL.high?'high':''}">🌞 UV ${uv} · ${uvL.text}${uvL.high?' · Sonnenschutz!':''}</div></div>`;
-    html += `<div><div class="w-hourly-title">Stündliche Temperatur</div><div class="hourly-scroll">`;
+    html += `<div>
+      <button onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden;this.textContent=this.nextElementSibling.hidden?'▼ Stundenansicht anzeigen':'▲ Stundenansicht einklappen'"
+        style="font-size:12px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 0;font-family:inherit;transition:color 0.15s"
+        onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+        ▼ Stundenansicht anzeigen
+      </button>
+      <div hidden style="margin-top:10px"><div class="hourly-scroll">`;
     hTemps.forEach((temp,i) => {
       const h = new Date(hTimes[i]).getHours();
       const label = i===0?'Jetzt':h+':00';
@@ -641,7 +669,7 @@ async function loadWeather() {
         <span class="hourly-icon">${WMO_ICON[hCodes[i]]||'🌡'}</span>
       </div>`;
     });
-    html += `</div></div>`;
+    html += `</div></div></div>`;
     document.getElementById('weather-skeleton').hidden = true;
     const wc = document.getElementById('weather-content');
     wc.innerHTML = html; wc.hidden = false;
@@ -661,19 +689,24 @@ async function loadWeather() {
     // Stats row
     mhtml += `<div class="w-mobile-stats">
       <div class="w-mobile-stat"><span class="w-mobile-stat-label">Hoch/Tief</span><span class="w-mobile-stat-val">${tMax}°/${tMin}°</span></div>
-      <div class="w-mobile-stat"><span class="w-mobile-stat-label">Wind</span><span class="w-mobile-stat-val">${wind} km/h</span></div>
+      <div class="w-mobile-stat"><span class="w-mobile-stat-label">Wind</span><span class="w-mobile-stat-val">${windArrow} ${wind} km/h</span></div>
       <div class="w-mobile-stat"><span class="w-mobile-stat-label">UV</span><span class="w-mobile-stat-val">${uv} <span style="font-size:10px;font-family:sans-serif;font-weight:400">${uvL.text}</span></span></div>
       <div class="w-mobile-stat"><span class="w-mobile-stat-label">Regen</span><span class="w-mobile-stat-val">${rainToday}%</span></div>
     </div>`;
-    // Compact alerts (only relevant ones)
+    // Compact alerts
     const alerts = [];
     if (rainToday >= 30)    alerts.push(`<div class="w-mobile-alert rain">🌧 Regen heute · ${rainToday}%</div>`);
     if (rainTomorrow >= 30) alerts.push(`<div class="w-mobile-alert rain">🌧 Regen morgen · ${rainTomorrow}%</div>`);
     if (wind >= 30)         alerts.push(`<div class="w-mobile-alert wind">💨 Wind · ${wind} km/h</div>`);
     if (uvL.high)           alerts.push(`<div class="w-mobile-alert uv${uvL.high?' high':''}">🌞 UV ${uv} · Sonnenschutz!</div>`);
     if (alerts.length > 0)  mhtml += `<div class="w-mobile-alerts">${alerts.join('')}</div>`;
-    // Compact hourly (icon + temp, no bars)
-    mhtml += `<div class="w-mobile-hourly">`;
+    // Collapsible hourly
+    mhtml += `<div>
+      <button onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden;this.textContent=this.nextElementSibling.hidden?'▼ Stundenansicht anzeigen':'▲ Stundenansicht einklappen'"
+        style="font-size:12px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 0;font-family:inherit">
+        ▼ Stundenansicht anzeigen
+      </button>
+      <div hidden style="margin-top:8px"><div class="w-mobile-hourly">`;
     hTemps.slice(0, 12).forEach((temp,i) => {
       const h = new Date(hTimes[i]).getHours();
       const label = i===0?'Jetzt':h+':00';
@@ -683,7 +716,7 @@ async function loadWeather() {
         <span class="w-mobile-hourly-temp">${Math.round(temp)}°</span>
       </div>`;
     });
-    mhtml += `</div>`;
+    mhtml += `</div></div></div>`;
     document.getElementById('mobile-skeleton').hidden = true;
     const mwc = document.getElementById('mobile-weather-content');
     mwc.innerHTML = mhtml; mwc.hidden = false;
@@ -975,13 +1008,24 @@ async function loadTransit() {
 
     content.innerHTML = html;
     const now = new Date();
-    updated.textContent = `Aktualisiert ${now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} · klicken`;
+    const timeStr = now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    updated.textContent = `Aktualisiert ${timeStr} · klicken`;
+
+    // Also render to mobile
+    const mContent = document.getElementById('mobile-transit-content');
+    const mUpdated = document.getElementById('mobile-transit-updated');
+    if (mContent) mContent.innerHTML = html;
+    if (mUpdated) mUpdated.textContent = `Aktualisiert ${timeStr} · klicken`;
   } catch(e) {
     content.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 0">
       ⚙️ Cloudflare Worker nicht konfiguriert<br>
       <span style="font-size:11px">Siehe Setup-Anleitung im Code · WORKER_URL anpassen</span>
     </div>`;
     updated.textContent = 'Fehler · erneut klicken';
+    const mContent = document.getElementById('mobile-transit-content');
+    const mUpdated = document.getElementById('mobile-transit-updated');
+    if (mContent) mContent.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0">⚙️ Worker nicht konfiguriert</div>`;
+    if (mUpdated) mUpdated.textContent = 'Fehler · erneut klicken';
   }
 }
 
