@@ -87,7 +87,20 @@
     body.dark .theme-toggle { background: #444; }
     body.dark .theme-toggle::after { content: '🌙'; transform: translateX(24px); }
 
-    .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: start; }
+    .desktop-nav { display: flex; align-items: center; gap: 6px; }
+    .nav-btn-sm {
+      display: flex; align-items: center; gap: 5px;
+      height: 30px; padding: 0 12px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      background: var(--surface); font-family: 'DM Sans', sans-serif;
+      font-size: 12px; font-weight: 500; color: var(--muted);
+      text-decoration: none; transition: border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .nav-btn-sm:hover { border-color: var(--accent); color: var(--text); }
+    @media (max-width: 768px) { .desktop-nav { display: none; } }
+
     .nav-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
     .nav-btn {
       display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -386,6 +399,9 @@
     }
 
     /* ══ MOBILE OVERRIDES ══ */
+    @media (max-width: 1024px) {
+      .columns { grid-template-columns: 1fr 1fr; }
+    }
     @media (max-width: 768px) {
       .page { padding: 16px 16px env(safe-area-inset-bottom, 32px); gap: 14px; }
       .columns { display: flex; flex-direction: column; gap: 14px; width: 100%; }
@@ -419,7 +435,15 @@
       <span class="clock" id="clock">00:00</span>
       <span class="date-label" id="date-label"></span>
     </div>
-    <button class="theme-toggle" id="theme-toggle" aria-label="Dark mode toggle"></button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <!-- Desktop nav buttons – compact -->
+      <div class="desktop-nav" id="desktop-nav">
+        <a href="abendroutine.html" class="nav-btn-sm">🌙 Abendroutine</a>
+        <a href="ernaehrungsplan.html" class="nav-btn-sm">🥗 Ernährung</a>
+        <a href="kohlenhydrate.html" class="nav-btn-sm">🚴 Carbs</a>
+      </div>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Dark mode toggle"></button>
+    </div>
   </div>
 
   <!-- Columns (desktop: 2-col, mobile: single col) -->
@@ -480,7 +504,7 @@
       <button class="submit-btn" id="submit-btn">Eintragen</button>
     </div>
 
-    <!-- RIGHT (desktop only): Full weather + nav -->
+    <!-- RIGHT col 1: Weather -->
     <div class="weather-col">
       <div class="card" id="weather-card">
         <div id="weather-skeleton">
@@ -502,13 +526,10 @@
         </div>
         <div id="weather-content" hidden></div>
       </div>
+    </div>
 
-      <div class="nav-row">
-        <a href="abendroutine.html" class="nav-btn">🌙 Abendroutine</a>
-        <a href="ernaehrungsplan.html" class="nav-btn">🥗 Ernährungsplan</a>
-        <a href="kohlenhydrate.html" class="nav-btn">🚴 Carbs Rechner</a>
-      </div>
-
+    <!-- RIGHT col 2: Transit + nav -->
+    <div class="weather-col">
       <!-- Transit card -->
       <div class="transit-card">
         <div class="transit-header">
@@ -519,8 +540,7 @@
           <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px">Lädt…</div>
         </div>
       </div>
-
-  </div>
+    </div>
 
   <!-- Mobile nav (only on mobile, below form) -->
   <div class="nav-row" id="mobile-nav" style="display:none">
