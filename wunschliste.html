@@ -552,42 +552,34 @@ function updateFinanceUI() {
   const insight = document.getElementById('insight-box');
   const sparHint = document.getElementById('sparrate-hint');
   if (!isNaN(spent) && !isNaN(daily) && !isNaN(daysLeft)) {
-    const monthlyBudget = getBudget();
+    const monthlyBudget  = getBudget();
     const projectedSpend = spent * daysLeft;
-    const projected = monthlyBudget - projectedSpend;
-
-    // Top prio item
+    const projected      = monthlyBudget - projectedSpend;
+    const isOverdrawn    = daily < 0;
     const topItem = getSorted(items.filter(i=>!i.bought))[0];
 
-    if (projected >= 0) {
-      // On track
-      const savingsNeeded = topItem?.price ? Math.max(0, topItem.price - projected) : 0;
-      const monthsNeeded  = savingsNeeded > 0 && curSpar > 0 ? Math.ceil(savingsNeeded / curSpar) : 0;
-      insight.className = 'insight-box ok';
-      insight.innerHTML = topItem
-        ? `✓ Du bist auf Kurs. Du gibst <strong>${spent.toFixed(2)}€/Tag</strong> aus und hast Prognose <strong>+${projected.toFixed(0)}€</strong> am Monatsende. ${savingsNeeded > 0 ? `Für <strong>${topItem.name}</strong> (${topItem.price}€) sparst du noch <strong>${monthsNeeded} Monat${monthsNeeded!==1?'e':''}</strong> bei aktueller Sparrate.` : `<strong>${topItem.name}</strong> könntest du dir diesen Monat leisten.`}`
-        : `✓ Du bist auf Kurs – <strong>+${projected.toFixed(0)}€</strong> Prognose Monatsende.`;
-    } else {
-      // Overspending
-      const overPerDay = spent - (monthlyBudget / 30);
+    if (isOverdrawn) {
+      // Already in the red today
       insight.className = 'insight-box bad';
-      insight.innerHTML = `⚠️ Du gibst <strong>${spent.toFixed(2)}€/Tag</strong> aus – das sind <strong>${overPerDay.toFixed(2)}€ zu viel</strong> pro Tag. Prognose: <strong>${projected.toFixed(0)}€ Überzug</strong>. ${curSpar > 0 ? `Deine Sparrate von <strong>${curSpar}€/Mo</strong> ist gefährdet.` : 'Sparrate anpassen!'}`;
+      insight.innerHTML = `⚠️ Du bist heute <strong>${Math.abs(daily).toFixed(2)}€ im Minus</strong>. Versuche die nächsten <strong>${daysLeft} Tage</strong> weniger auszugeben um den Monat auszugleichen.${topItem ? ` Kein Kauf von <strong>${topItem.name}</strong> diesen Monat.` : ''}`;
+    } else if (projected < 0) {
+      insight.className = 'insight-box warn';
+      insight.innerHTML = `⚠️ Du gibst <strong>${spent.toFixed(2)}€/Tag</strong> aus – bei diesem Tempo endet der Monat mit <strong>${projected.toFixed(0)}€ Überzug</strong>. Reduziere auf max. <strong>${(monthlyBudget/30).toFixed(2)}€/Tag</strong>.`;
+    } else {
+      const monthsNeeded = topItem?.price && curSpar > 0 ? Math.ceil(topItem.price / curSpar) : null;
+      insight.className = 'insight-box ok';
+      insight.innerHTML = topItem && monthsNeeded
+        ? `✓ Du bist auf Kurs. Du gibst <strong>${spent.toFixed(2)}€/Tag</strong> aus – Prognose <strong>+${projected.toFixed(0)}€</strong> am Monatsende. Für <strong>${topItem.name}</strong> (${topItem.price}€) sparst du noch <strong>${monthsNeeded} Monat${monthsNeeded!==1?'e':''}</strong>.`
+        : `✓ Du bist auf Kurs – <strong>+${projected.toFixed(0)}€</strong> Prognose Monatsende.`;
     }
 
-    // Sparrate Empfehlung
-    if (!isNaN(curSpar)) {
-      const topActive = getSorted(items.filter(i=>!i.bought));
-      if (topActive.length > 0) {
-        const goal = topActive[0];
-        if (goal.price) {
-          const monthsAt = curSpar > 0 ? Math.ceil(goal.price / curSpar) : '∞';
-          const betterSpar = Math.ceil(goal.price / 3); // reach in 3 months
-          const diff = betterSpar - curSpar;
-          sparHint.innerHTML = diff > 0
-            ? `Mit <strong>${betterSpar}€/Mo</strong> (+${diff}€) erreichst du <strong>${goal.name}</strong> in 3 Monaten und legst den Rest an.`
-            : `Du erreichst <strong>${goal.name}</strong> in <strong>${monthsAt} Monat${monthsAt!==1?'e':''}</strong> – die Sparrate ist gut, leg den Rest langfristig an.`;
-        }
-      }
+    // Sparrate hint
+    if (topItem?.price) {
+      const betterSpar = Math.ceil(topItem.price / 3);
+      const diff = betterSpar - curSpar;
+      sparHint.innerHTML = diff > 0
+        ? `Mit <strong>${betterSpar}€/Mo</strong> (+${diff}€) erreichst du <strong>${topItem.name}</strong> in 3 Monaten und legst den Rest an.`
+        : curSpar > 0 ? `Du erreichst <strong>${topItem.name}</strong> in <strong>${Math.ceil(topItem.price/curSpar)} Monat${Math.ceil(topItem.price/curSpar)!==1?'e':''}</strong> – leg den Rest langfristig an.` : '';
     }
   }
 }
@@ -599,23 +591,27 @@ function toggleFinanceDetail() {
   chev.classList.toggle('open', !panel.hidden);
 }
 
-// ── Can-buy logic
 function canBuyItem(item) {
   if (!item.price || isNaN(finance.daily)) return null;
-  const { spent, daysLeft } = finance;
-  const monthlyBudget = getBudget();
-  // Estimated end-of-month surplus
-  const projected = !isNaN(spent) && !isNaN(daysLeft)
-    ? monthlyBudget - spent * daysLeft
-    : finance.daily * (daysLeft || 15);
-  if (item.price <= projected) return { can: true, months: 0 };
-  // Months via sparrate
-  const spar = parseFloat(document.getElementById('sparrate-input')?.value) || finance.sparrate || 0;
-  if (spar > 0) {
-    const months = Math.ceil(item.price / spar);
+  const { daily, spent, daysLeft, sparrate } = finance;
+
+  // If already in the red → can't buy anything
+  if (daily < 0) {
+    const spar = parseFloat(document.getElementById('sparrate-input')?.value) || sparrate || 0;
+    const months = spar > 0 ? Math.ceil(item.price / spar) : null;
     return { can: false, months };
   }
-  return { can: false, months: null };
+
+  const monthlyBudget = getBudget();
+  const projected = !isNaN(spent) && !isNaN(daysLeft)
+    ? monthlyBudget - spent * daysLeft
+    : daily * (daysLeft || 15);
+
+  if (item.price <= Math.max(0, projected)) return { can: true, months: 0 };
+
+  const spar = parseFloat(document.getElementById('sparrate-input')?.value) || sparrate || 0;
+  const months = spar > 0 ? Math.ceil(item.price / spar) : null;
+  return { can: false, months };
 }
 
 // ── Score
