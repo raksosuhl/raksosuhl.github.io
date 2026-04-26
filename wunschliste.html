@@ -359,12 +359,97 @@ const SHEETS_ID   = '2PACX-1vTVvTiUbd-9gQBaui310DQVRglT85CYjuNxB5KRtRWTNZBEBnrEt
 const SHEETS_GID  = '965386565';
 const APPS_SCRIPT_URL = localStorage.getItem('apps_script_url') || '';
 
+// ── GitHub Sync
+const GH_OWNER = 'raksosuhl';
+const GH_REPO  = 'raksosuhl.github.io';
+const GH_FILE  = 'wunschliste-data.json';
+
+function getGhToken() {
+  let token = localStorage.getItem('gh_token');
+  if (!token) {
+    token = prompt('GitHub Token eingeben (einmalig, wird lokal gespeichert):');
+    if (token) localStorage.setItem('gh_token', token.trim());
+  }
+  return token;
+}
+
+let ghFileSha = null; // needed for updates
+
+async function ghLoad() {
+  const token = getGhToken(); if (!token) return null;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('GitHub load failed: ' + res.status);
+    const data = await res.json();
+    ghFileSha = data.sha;
+    return JSON.parse(atob(data.content.replace(/\n/g,'')));
+  } catch(e) { console.warn('GitHub load error:', e); return null; }
+}
+
+async function ghSave(items) {
+  const token = getGhToken(); if (!token) return;
+  try {
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
+    const body = { message: 'Update wunschliste', content };
+    if (ghFileSha) body.sha = ghFileSha;
+    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('GitHub save failed: ' + res.status);
+    const data = await res.json();
+    ghFileSha = data.content.sha;
+    showSyncStatus('✓ Synced', 'green');
+  } catch(e) { console.warn('GitHub save error:', e); showSyncStatus('Sync-Fehler', 'red'); }
+}
+
+function showSyncStatus(msg, color) {
+  let el = document.getElementById('sync-status');
+  if (!el) {
+    el = document.createElement('span');
+    el.id = 'sync-status';
+    el.style.cssText = 'font-size:11px;font-family:DM Mono,monospace;margin-left:8px;transition:opacity 1s';
+    document.querySelector('.topbar-right').prepend(el);
+  }
+  el.textContent = msg;
+  el.style.color  = color === 'green' ? 'var(--green)' : 'var(--red)';
+  el.style.opacity = '1';
+  setTimeout(() => el.style.opacity = '0', 3000);
+}
+
+async function syncInit() {
+  showSyncStatus('⟳ Syncing…', 'var(--muted)');
+  const remote = await ghLoad();
+  if (remote && Array.isArray(remote)) {
+    // Merge: remote wins for items not in local, local wins for newer items
+    const localMap  = Object.fromEntries(items.map(i=>[i.id,i]));
+    const remoteMap = Object.fromEntries(remote.map(i=>[i.id,i]));
+    const merged = Object.values({...remoteMap, ...localMap});
+    items = merged;
+    saveItems(items);
+    renderAll();
+    showSyncStatus('✓ Synced', 'green');
+  } else if (items.length > 0) {
+    // No remote file yet – push local data
+    await ghSave(items);
+  } else {
+    showSyncStatus('Keine Daten', 'var(--muted)');
+  }
+}
+
 // ── Finance state (loaded from Sheets)
 let finance = { daily: null, spent: null, daysLeft: null, sparrate: null };
 
 // ── Items
 function loadItems() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
-function saveItems(i) { localStorage.setItem(STORAGE_KEY, JSON.stringify(i)); }
+function saveItems(i) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(i));
+  ghSave(i); // async, fire and forget
+}
 let items = loadItems();
 let editId = null, currentImg = null, selectedCat = '', sortMode = 'score', filterCat = '';
 
@@ -783,6 +868,7 @@ tt.addEventListener('click',()=>{
 // ── Init
 renderAll();
 loadFinance();
+syncInit();
 </script>
 </body>
 </html>
