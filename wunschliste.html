@@ -186,6 +186,39 @@
     @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
     .item-card{animation:fadeUp .3s ease both}
 
+    /* TABS */
+    .tabs{display:flex;gap:4px;background:var(--s2);border-radius:11px;padding:4px}
+    .tab-btn{flex:1;padding:8px 16px;border-radius:8px;border:none;background:transparent;font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+    .tab-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+    /* PLAN AUSGABEN */
+    .plan-list{display:flex;flex-direction:column;gap:10px}
+    .plan-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)}
+    .plan-item.urgent{border-color:rgba(220,38,38,.3);background:rgba(220,38,38,.03)}
+    .plan-item.soon{border-color:rgba(217,119,6,.3);background:rgba(217,119,6,.03)}
+    .plan-item.ok{border-color:rgba(26,152,98,.2);background:rgba(26,152,98,.02)}
+    .plan-emoji{font-size:24px;flex-shrink:0;width:36px;text-align:center}
+    .plan-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .plan-name{font-size:15px;font-weight:600;color:var(--text)}
+    .plan-date{font-size:11px;color:var(--muted)}
+    .plan-price{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:var(--text);flex-shrink:0}
+    .plan-days{font-size:11px;padding:3px 9px;border-radius:99px;font-weight:600;flex-shrink:0;white-space:nowrap}
+    .plan-days.urgent{background:rgba(220,38,38,.1);color:var(--red)}
+    .plan-days.soon{background:rgba(217,119,6,.1);color:var(--orange)}
+    .plan-days.ok{background:rgba(26,152,98,.1);color:var(--green)}
+    .plan-days.future{background:var(--s2);color:var(--muted)}
+    .plan-actions{display:flex;gap:5px;flex-shrink:0}
+    .plan-total-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow)}
+    .plan-total-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+    .plan-total-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--text)}
+    .plan-total-sub{font-size:11px;color:var(--muted)}
+
+    /* PLAN MODAL */
+    .plan-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+    .plan-modal-overlay.open{opacity:1;pointer-events:all}
+    .plan-modal{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:15px;box-shadow:0 24px 60px rgba(0,0,0,.2);transform:translateY(16px);transition:transform .25s;position:relative}
+    .plan-modal-overlay.open .plan-modal{transform:translateY(0)}
+
     @media(max-width:600px){
       .page{padding:16px 14px 60px;gap:14px}
       .topbar-left h1{font-size:26px}
@@ -193,6 +226,7 @@
       .items-grid{grid-template-columns:1fr}
       .fd-grid{grid-template-columns:1fr 1fr}
       .finance-banner{gap:10px}
+      .plan-item{flex-wrap:wrap}
     }
   </style>
 </head>
@@ -275,31 +309,73 @@
     <div class="budget-summary" id="budget-summary"></div>
   </div>
 
-  <!-- Sort bar -->
-  <div class="sort-bar">
-    <span class="sort-label">Sortieren</span>
-    <button class="sort-btn active" data-sort="score">Score</button>
-    <button class="sort-btn" data-sort="price-asc">Preis ↑</button>
-    <button class="sort-btn" data-sort="price-desc">Preis ↓</button>
-    <button class="sort-btn" data-sort="cpd">Cost/Tag</button>
-    <div class="spacer"></div>
-    <span class="items-count" id="items-count">0 Artikel</span>
-    <button class="add-btn" onclick="openModal()">+ Artikel</button>
-  </div>
-  <div class="tag-row" id="filter-row"></div>
-
-  <!-- Items -->
-  <div class="items-grid" id="items-grid"></div>
-
-  <!-- Bought -->
-  <div id="bought-section" hidden>
-    <div class="section-title" style="margin-bottom:12px">✓ Gekauft</div>
-    <div class="items-grid" id="bought-grid"></div>
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-wish" onclick="switchTab('wish')">🛒 Wunschliste</button>
+    <button class="tab-btn" id="tab-plan" onclick="switchTab('plan')">📅 Geplante Ausgaben</button>
   </div>
 
+  <!-- TAB: WUNSCHLISTE -->
+  <div id="view-wish">
+    <!-- Sort bar -->
+    <div class="sort-bar">
+      <span class="sort-label">Sortieren</span>
+      <button class="sort-btn active" data-sort="score">Score</button>
+      <button class="sort-btn" data-sort="price-asc">Preis ↑</button>
+      <button class="sort-btn" data-sort="price-desc">Preis ↓</button>
+      <button class="sort-btn" data-sort="cpd">Cost/Tag</button>
+      <div class="spacer"></div>
+      <span class="items-count" id="items-count">0 Artikel</span>
+      <button class="add-btn" onclick="openModal()">+ Artikel</button>
+    </div>
+    <div class="tag-row" id="filter-row" style="margin-top:-4px"></div>
+    <div class="items-grid" id="items-grid"></div>
+    <div id="bought-section" hidden>
+      <div class="section-title" style="margin-bottom:12px">✓ Gekauft</div>
+      <div class="items-grid" id="bought-grid"></div>
+    </div>
+  </div>
+
+  <!-- TAB: GEPLANTE AUSGABEN -->
+  <div id="view-plan" hidden>
+    <!-- Totals -->
+    <div class="plan-total-bar">
+      <div>
+        <div class="plan-total-label">⚠️ Fällig in 30 Tagen</div>
+        <div class="plan-total-val" id="plan-due-30">0 €</div>
+        <div class="plan-total-sub" id="plan-due-30-sub"></div>
+      </div>
+      <div>
+        <div class="plan-total-label">📋 Alle geplanten Ausgaben</div>
+        <div class="plan-total-val" id="plan-total-all">0 €</div>
+        <div class="plan-total-sub" id="plan-count-sub"></div>
+      </div>
+      <button class="add-btn" onclick="openPlanModal()">+ Ausgabe</button>
+    </div>
+    <div class="plan-list" id="plan-list" style="margin-top:4px"></div>
+  </div>
+
+</div><!-- end page -->
+
+<!-- Plan Modal -->
+<div class="plan-modal-overlay" id="plan-modal-overlay" onclick="if(event.target===this)closePlanModal()">
+  <div class="plan-modal">
+    <button class="modal-close" onclick="closePlanModal()">✕</button>
+    <div class="modal-title" id="plan-modal-title">Ausgabe planen</div>
+    <div class="field"><label>Name *</label><input type="text" id="p-name" placeholder="z.B. Urlaub Kroatien"/></div>
+    <div class="two-col">
+      <div class="field"><label>Betrag (€) *</label><input type="number" id="p-price" min="0" step="0.01" placeholder="700"/></div>
+      <div class="field"><label>Fälligkeitsdatum *</label><input type="date" id="p-date"/></div>
+    </div>
+    <div class="two-col">
+      <div class="field"><label>Emoji</label><input type="text" id="p-emoji" placeholder="✈️" maxlength="2"/></div>
+      <div class="field"><label>Notiz</label><input type="text" id="p-note" placeholder="Anmerkung…"/></div>
+    </div>
+    <button class="modal-submit" onclick="savePlanItem()">Speichern</button>
+  </div>
 </div>
 
-<!-- Modal -->
+<!-- Wish Modal -->
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">✕</button>
@@ -554,7 +630,8 @@ function updateFinanceUI() {
   if (!isNaN(spent) && !isNaN(daily) && !isNaN(daysLeft)) {
     const monthlyBudget  = getBudget();
     const projectedSpend = spent * daysLeft;
-    const projected      = monthlyBudget - projectedSpend;
+    const planned30      = planDue30Total();
+    const projected      = monthlyBudget - projectedSpend - planned30;
     const isOverdrawn    = daily < 0;
     const topItem = getSorted(items.filter(i=>!i.bought))[0];
 
@@ -569,8 +646,8 @@ function updateFinanceUI() {
       const monthsNeeded = topItem?.price && curSpar > 0 ? Math.ceil(topItem.price / curSpar) : null;
       insight.className = 'insight-box ok';
       insight.innerHTML = topItem && monthsNeeded
-        ? `✓ Du bist auf Kurs. Du gibst <strong>${spent.toFixed(2)}€/Tag</strong> aus – Prognose <strong>+${projected.toFixed(0)}€</strong> am Monatsende. Für <strong>${topItem.name}</strong> (${topItem.price}€) sparst du noch <strong>${monthsNeeded} Monat${monthsNeeded!==1?'e':''}</strong>.`
-        : `✓ Du bist auf Kurs – <strong>+${projected.toFixed(0)}€</strong> Prognose Monatsende.`;
+        ? `✓ Du bist auf Kurs. Du gibst <strong>${spent.toFixed(2)}€/Tag</strong> aus – Prognose <strong>+${projected.toFixed(0)}€</strong> am Monatsende${planned30>0?` (nach ${planned30.toFixed(0)}€ geplanten Ausgaben)`:''} . Für <strong>${topItem.name}</strong> (${topItem.price}€) sparst du noch <strong>${monthsNeeded} Monat${monthsNeeded!==1?'e':''}</strong>.`
+        : `✓ Du bist auf Kurs – <strong>+${projected.toFixed(0)}€</strong> Prognose Monatsende${planned30>0?` (nach ${planned30.toFixed(0)}€ geplanten Ausgaben)`:''}. `;
     }
 
     // Sparrate hint
@@ -594,6 +671,7 @@ function toggleFinanceDetail() {
 function canBuyItem(item) {
   if (!item.price || isNaN(finance.daily)) return null;
   const { daily, spent, daysLeft, sparrate } = finance;
+  const planned30 = planDue30Total();
 
   // If already in the red → can't buy anything
   if (daily < 0) {
@@ -604,8 +682,8 @@ function canBuyItem(item) {
 
   const monthlyBudget = getBudget();
   const projected = !isNaN(spent) && !isNaN(daysLeft)
-    ? monthlyBudget - spent * daysLeft
-    : daily * (daysLeft || 15);
+    ? monthlyBudget - spent * daysLeft - planned30
+    : daily * (daysLeft || 15) - planned30;
 
   if (item.price <= Math.max(0, projected)) return { can: true, months: 0 };
 
@@ -860,6 +938,114 @@ tt.addEventListener('click',()=>{
   localStorage.setItem('theme',d?'dark':'light');
   localStorage.setItem('themeSetAt',Date.now());
 });
+
+// ── Tab switching
+function switchTab(tab) {
+  document.getElementById('view-wish').hidden = tab !== 'wish';
+  document.getElementById('view-plan').hidden = tab !== 'plan';
+  document.getElementById('tab-wish').classList.toggle('active', tab === 'wish');
+  document.getElementById('tab-plan').classList.toggle('active', tab === 'plan');
+  if (tab === 'plan') renderPlan();
+}
+
+// ── Planned expenses
+const PLAN_KEY = 'ausgaben_plan_v1';
+function loadPlan() { try { return JSON.parse(localStorage.getItem(PLAN_KEY)) || []; } catch { return []; } }
+function savePlan(p) { localStorage.setItem(PLAN_KEY, JSON.stringify(p)); }
+let planItems = loadPlan();
+let editPlanId = null;
+
+function daysUntil(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr);
+  return Math.round((target - today) / 86400000);
+}
+
+// Sum of plan items due within 30 days (used in finance calc)
+function planDue30Total() {
+  return planItems
+    .filter(p => { const d = daysUntil(p.date); return d >= 0 && d <= 30; })
+    .reduce((s,p) => s + (p.price||0), 0);
+}
+
+function renderPlan() {
+  const sorted = [...planItems].sort((a,b) => new Date(a.date)-new Date(b.date));
+  const total30 = planDue30Total();
+  const totalAll = planItems.reduce((s,p)=>s+(p.price||0),0);
+
+  document.getElementById('plan-due-30').textContent = total30.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+  document.getElementById('plan-total-all').textContent = totalAll.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+  document.getElementById('plan-due-30-sub').textContent = total30 > 0 ? 'reduziert dein verfügbares Budget' : 'Nichts fällig';
+  document.getElementById('plan-count-sub').textContent = `${planItems.length} geplante Ausgabe${planItems.length!==1?'n':''}`;
+
+  const list = document.getElementById('plan-list');
+  if (sorted.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">Keine geplanten Ausgaben</div>`;
+    return;
+  }
+
+  list.innerHTML = sorted.map(p => {
+    const days = daysUntil(p.date);
+    const urgencyClass = days < 0 ? 'ok' : days <= 7 ? 'urgent' : days <= 30 ? 'soon' : 'ok';
+    const daysLabel = days < 0 ? 'vergangen' : days === 0 ? 'Heute' : days === 1 ? 'Morgen' : `in ${days} Tagen`;
+    const daysClass = days < 0 ? 'ok' : days <= 7 ? 'urgent' : days <= 30 ? 'soon' : 'future';
+    const dateFormatted = new Date(p.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+    return `<div class="plan-item ${urgencyClass}">
+      <div class="plan-emoji">${p.emoji||'📋'}</div>
+      <div class="plan-body">
+        <div class="plan-name">${p.name}</div>
+        <div class="plan-date">${dateFormatted}${p.note ? ' · ' + p.note : ''}</div>
+      </div>
+      <span class="plan-days ${daysClass}">${daysLabel}</span>
+      <div class="plan-price">${(p.price||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})} €</div>
+      <div class="plan-actions">
+        <button class="item-btn" onclick="openPlanModal('${p.id}')" style="padding:5px 8px">✏️</button>
+        <button class="item-btn danger" onclick="deletePlanItem('${p.id}')" style="padding:5px 8px">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openPlanModal(id=null) {
+  editPlanId = id;
+  const p = id ? planItems.find(x=>x.id===id) : null;
+  document.getElementById('plan-modal-title').textContent = id ? 'Ausgabe bearbeiten' : 'Ausgabe planen';
+  document.getElementById('p-name').value  = p?.name  || '';
+  document.getElementById('p-price').value = p?.price || '';
+  document.getElementById('p-date').value  = p?.date  || '';
+  document.getElementById('p-emoji').value = p?.emoji || '';
+  document.getElementById('p-note').value  = p?.note  || '';
+  document.getElementById('plan-modal-overlay').classList.add('open');
+  document.getElementById('p-name').focus();
+}
+function closePlanModal() { document.getElementById('plan-modal-overlay').classList.remove('open'); }
+
+function savePlanItem() {
+  const name  = document.getElementById('p-name').value.trim();
+  const price = parseFloat(document.getElementById('p-price').value);
+  const date  = document.getElementById('p-date').value;
+  if (!name || !date) return;
+  const item = {
+    id:    editPlanId || Date.now().toString(),
+    name, price: isNaN(price)?0:price, date,
+    emoji: document.getElementById('p-emoji').value.trim() || '📋',
+    note:  document.getElementById('p-note').value.trim() || '',
+  };
+  planItems = editPlanId ? planItems.map(p=>p.id===editPlanId?item:p) : [...planItems, item];
+  savePlan(planItems);
+  closePlanModal();
+  renderPlan();
+  updateFinanceUI(); // recalc with new planned costs
+}
+
+function deletePlanItem(id) {
+  if (!confirm('Löschen?')) return;
+  planItems = planItems.filter(p=>p.id!==id);
+  savePlan(planItems);
+  renderPlan();
+  updateFinanceUI();
+}
 
 // ── Init
 renderAll();
