@@ -1,1 +1,35 @@
-
+[
+  {
+    "id": "1777191605696",
+    "name": "Garmin Edge 850",
+    "price": 250,
+    "years": 4,
+    "link": "https://www.garmin.com/de-DE/p/1630197/",
+    "note": null,
+    "cat": "Sport",
+    "img": "https://images.mtb-news.de/Wzf2kHqIed2R0EAr7KPEI4_ZRsM=/1200x640/https%3A%2F%2Fwww.rennrad-news.de%2Fnews%2Fwp-content%2Fuploads%2F2025%2F09%2Fgarmin-edge-850-550.jpg",
+    "want": 6,
+    "use": 5,
+    "budgetFit": 3,
+    "urgent": 2,
+    "addedAt": 1777191605696,
+    "bought": false,
+    "boughtAt": null
+  },
+  {
+    "id": "1777192867844",
+    "name": "PNS Hose Ali + Normale",
+    "price": 60,
+    "years": 3,
+    "link": "https://www.aliexpress.com/p/shoppingcart/index.html?spm=a2g0o.home.header.1.22e77a8b7HZh6N",
+    "note": null,
+    "cat": "Sport",
+    "img": "https://images.nexusapp.co/assets/a3/95/da/714590806.jpg",
+    "want": 6,
+    "use": 7,
+    "budgetFit": 8,
+    "urgent": 4,
+    "addedAt": 1777192867844,
+    "bought": false
+  }
+]
