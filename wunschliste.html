@@ -465,10 +465,11 @@ async function ghLoad() {
   } catch(e) { console.warn('GitHub load error:', e); return null; }
 }
 
-async function ghSave(items) {
+async function ghSave(wishItems, planList) {
   const token = getGhToken(); if (!token) return;
   try {
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(items, null, 2))));
+    const payload = { items: wishItems ?? items, plan: planList ?? planItems, savedAt: Date.now() };
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
     const body = { message: 'Update wunschliste', content };
     if (ghFileSha) body.sha = ghFileSha;
     const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
@@ -492,28 +493,38 @@ function showSyncStatus(msg, color) {
     document.querySelector('.topbar-right').prepend(el);
   }
   el.textContent = msg;
-  el.style.color  = color === 'green' ? 'var(--green)' : 'var(--red)';
+  el.style.color  = color === 'green' ? 'var(--green)' : color === 'red' ? 'var(--red)' : 'var(--muted)';
   el.style.opacity = '1';
   setTimeout(() => el.style.opacity = '0', 3000);
 }
 
 async function syncInit() {
-  showSyncStatus('⟳ Syncing…', 'var(--muted)');
+  showSyncStatus('⟳ Syncing…', 'neutral');
   const remote = await ghLoad();
-  if (remote && Array.isArray(remote)) {
-    // Merge: remote wins for items not in local, local wins for newer items
-    const localMap  = Object.fromEntries(items.map(i=>[i.id,i]));
-    const remoteMap = Object.fromEntries(remote.map(i=>[i.id,i]));
-    const merged = Object.values({...remoteMap, ...localMap});
-    items = merged;
-    saveItems(items);
+  if (remote) {
+    // Remote is the single source of truth – use it directly (last-write-wins)
+    const remoteItems = remote.items || (Array.isArray(remote) ? remote : []);
+    const remotePlan  = remote.plan  || [];
+    const remoteTs    = remote.savedAt || 0;
+    const localTs     = +localStorage.getItem('wl_savedAt') || 0;
+
+    if (remoteTs >= localTs) {
+      // Remote is newer → overwrite local
+      items = remoteItems;
+      planItems = remotePlan;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem(PLAN_KEY, JSON.stringify(planItems));
+    } else {
+      // Local is newer → push to remote
+      await ghSave(items, planItems);
+    }
     renderAll();
+    renderPlan();
     showSyncStatus('✓ Synced', 'green');
-  } else if (items.length > 0) {
-    // No remote file yet – push local data
-    await ghSave(items);
+  } else if (items.length > 0 || planItems.length > 0) {
+    await ghSave(items, planItems);
   } else {
-    showSyncStatus('Keine Daten', 'var(--muted)');
+    showSyncStatus('', 'neutral');
   }
 }
 
@@ -524,7 +535,8 @@ let finance = { daily: null, spent: null, daysLeft: null, sparrate: null };
 function loadItems() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
 function saveItems(i) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(i));
-  ghSave(i); // async, fire and forget
+  localStorage.setItem('wl_savedAt', Date.now());
+  ghSave(i, planItems);
 }
 let items = loadItems();
 let editId = null, currentImg = null, selectedCat = '', sortMode = 'score', filterCat = '';
@@ -951,7 +963,11 @@ function switchTab(tab) {
 // ── Planned expenses
 const PLAN_KEY = 'ausgaben_plan_v1';
 function loadPlan() { try { return JSON.parse(localStorage.getItem(PLAN_KEY)) || []; } catch { return []; } }
-function savePlan(p) { localStorage.setItem(PLAN_KEY, JSON.stringify(p)); }
+function savePlan(p) {
+  localStorage.setItem(PLAN_KEY, JSON.stringify(p));
+  localStorage.setItem('wl_savedAt', Date.now());
+  ghSave(items, p);
+}
 let planItems = loadPlan();
 let editPlanId = null;
 
