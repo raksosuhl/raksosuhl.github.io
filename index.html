@@ -1502,17 +1502,22 @@ async function doBiometric() {
 // ══════════════════════════════════════════
 // ── GOOGLE SHEETS
 // ══════════════════════════════════════════
-const SHEETS_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVvTiUbd-9gQBaui310DQVRglT85CYjuNxB5KRtRWTNZBEBnrEtoMI58I2_vi8qPz8oGCmgaf1Rjo9/pubhtml?gid=965386565&single=true&chrome=false&widget=false&headers=false&range=';
 const APPS_SCRIPT_URL = localStorage.getItem('apps_script_url') || '';
+const SHEETS_ID  = '2PACX-1vTVvTiUbd-9gQBaui310DQVRglT85CYjuNxB5KRtRWTNZBEBnrEtoMI58I2_vi8qPz8oGCmgaf1Rjo9';
+const SHEETS_GID = '965386565';
 
 async function fetchCell(range) {
-  const url = `https://docs.google.com/spreadsheets/d/e/2PACX-1vTVvTiUbd-9gQBaui310DQVRglT85CYjuNxB5KRtRWTNZBEBnrEtoMI58I2_vi8qPz8oGCmgaf1Rjo9/pubhtml?gid=965386565&single=true&chrome=false&widget=false&headers=false&range=${range}`;
-  // Use Cloudflare Worker to bypass CORS
+  const url = `https://docs.google.com/spreadsheets/d/e/${SHEETS_ID}/pubhtml?gid=${SHEETS_GID}&single=true&chrome=false&widget=false&headers=false&range=${range}`;
   const res = await fetch(`${WORKER_URL}/?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(8000) });
   const html = await res.text();
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const td = doc.querySelector('td');
+  const doc  = new DOMParser().parseFromString(html, 'text/html');
+  const td   = doc.querySelector('td');
   return td ? td.textContent.trim() : null;
+}
+
+function parseEuro(raw) {
+  if (!raw) return NaN;
+  return parseFloat(raw.replace(/[€\s\u00a0]/g,'').replace('−','-').replace(',','.'));
 }
 
 async function loadSheets() {
@@ -1522,37 +1527,30 @@ async function loadSheets() {
       fetchCell('L47:L47'),
     ]);
 
-    // Parse daily (I38) – format may be "−55,06" or "-55.06" or "55,06 €"
-    const daily = parseFloat((rawDaily||'').replace(/[€\s\u00a0]/g,'').replace('−','-').replace(',','.'));
+    const daily    = parseEuro(rawDaily);
     const dailyEl  = document.getElementById('sheets-daily');
     const dailySub = document.getElementById('sheets-daily-sub');
     if (!isNaN(daily)) {
-      dailyEl.textContent = (daily >= 0 ? '+' : '') + daily.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+      dailyEl.textContent  = (daily >= 0 ? '+' : '') + daily.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
       const cls = daily >= 20 ? 'great' : daily >= 5 ? 'good' : daily >= 0 ? 'neutral' : daily >= -10 ? 'warning' : 'negative';
-      dailyEl.className   = 'sheets-val ' + cls;
+      dailyEl.className    = 'sheets-val ' + cls;
       dailySub.textContent = daily >= 20 ? '✓ gut dabei' : daily >= 5 ? 'knapp ok' : daily >= 0 ? 'fast aufgebraucht' : daily >= -10 ? 'leicht überzogen' : 'überzogen';
     } else {
       dailyEl.textContent  = rawDaily || '—';
       dailyEl.className    = 'sheets-val';
-      dailySub.textContent = rawDaily ? `"${rawDaily}"` : 'keine Daten';
+      dailySub.textContent = 'keine Daten';
     }
 
-    // Parse sparrate (L47)
-    const sparrate = parseFloat((rawSparrate||'').replace(/[€\s\u00a0]/g,'').replace(',','.'));
-    const sparEl = document.getElementById('sheets-sparrate');
-    if (!isNaN(sparrate) && sparEl.value === '') {
-      sparEl.value = sparrate.toFixed(0);
-    } else {
-      const saved = localStorage.getItem('sparrate_local');
-      if (saved && sparEl.value === '') sparEl.value = saved;
-    }
+    const sparrate = parseEuro(rawSparrate);
+    const sparEl   = document.getElementById('sheets-sparrate');
+    if (!isNaN(sparrate) && sparEl.value === '') sparEl.value = sparrate.toFixed(0);
+    else { const s = localStorage.getItem('sparrate_local'); if (s && !sparEl.value) sparEl.value = s; }
 
     document.getElementById('sheets-updated').textContent =
       'Stand: ' + new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-
   } catch(e) {
     document.getElementById('sheets-daily').textContent     = '—';
-    document.getElementById('sheets-daily-sub').textContent = 'Fehler beim Laden';
+    document.getElementById('sheets-daily-sub').textContent = 'Fehler: ' + e.message;
   }
 }
 
