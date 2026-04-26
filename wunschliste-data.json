@@ -1,0 +1,36 @@
+[
+  {
+    "id": "1777191605696",
+    "name": "Garmin Edge 850",
+    "price": 250,
+    "years": 4,
+    "link": "https://www.garmin.com/de-DE/p/1630197/",
+    "note": null,
+    "cat": "Sport",
+    "img": "https://images.mtb-news.de/Wzf2kHqIed2R0EAr7KPEI4_ZRsM=/1200x640/https%3A%2F%2Fwww.rennrad-news.de%2Fnews%2Fwp-content%2Fuploads%2F2025%2F09%2Fgarmin-edge-850-550.jpg",
+    "want": 6,
+    "use": 5,
+    "budgetFit": 3,
+    "urgent": 2,
+    "addedAt": 1777191605696,
+    "bought": false,
+    "boughtAt": null
+  },
+  {
+    "id": "1777191719728",
+    "name": "Urlaub Kroatien",
+    "price": 700,
+    "years": 1,
+    "link": null,
+    "note": null,
+    "cat": "Sonstiges",
+    "img": "https://encrypted-tbn0.gstatic.com/licensed-image?q=tbn:ANd9GcTDqE5eC-8ZnHR8PSQo9Vf1lRQy6tojNJtRBNl8XYISrcyBnedZUxACnTTzAcTmirjMfeldHcgPOAp17BexJUzoivo&s=19",
+    "want": 10,
+    "use": 7,
+    "budgetFit": 3,
+    "urgent": 4,
+    "addedAt": 1777191719728,
+    "bought": false,
+    "boughtAt": null
+  }
+]
