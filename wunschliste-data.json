@@ -34,23 +34,6 @@
       "bought": false
     },
     {
-      "id": "1777191719728",
-      "name": "Urlaub Kroatien",
-      "price": 700,
-      "years": 1,
-      "link": null,
-      "note": null,
-      "cat": "Sonstiges",
-      "img": "https://encrypted-tbn0.gstatic.com/licensed-image?q=tbn:ANd9GcTDqE5eC-8ZnHR8PSQo9Vf1lRQy6tojNJtRBNl8XYISrcyBnedZUxACnTTzAcTmirjMfeldHcgPOAp17BexJUzoivo&s=19",
-      "want": 10,
-      "use": 7,
-      "budgetFit": 3,
-      "urgent": 4,
-      "addedAt": 1777191719728,
-      "bought": false,
-      "boughtAt": null
-    },
-    {
       "id": "1777230471693",
       "name": "60 Toll Klotze",
       "price": 250,
@@ -68,5 +51,5 @@
     }
   ],
   "plan": [],
-  "savedAt": 1777230471694
+  "savedAt": 1777230476022
 }
