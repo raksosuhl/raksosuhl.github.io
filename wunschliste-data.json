@@ -20,7 +20,7 @@
     "id": "1777191719728",
     "name": "Urlaub Kroatien",
     "price": 700,
-    "years": 0.2,
+    "years": 1,
     "link": null,
     "note": null,
     "cat": "Sonstiges",
@@ -30,7 +30,8 @@
     "budgetFit": 3,
     "urgent": 4,
     "addedAt": 1777191719728,
-    "bought": false
+    "bought": false,
+    "boughtAt": null
   },
   {
     "id": "1777192867844",
