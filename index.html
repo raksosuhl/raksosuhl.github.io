@@ -455,7 +455,7 @@
     .sheets-card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); box-shadow: var(--shadow);
-      padding: 12px 20px; display: flex; align-items: center;
+      padding: 14px 20px; display: flex; align-items: center;
       gap: 20px; flex-wrap: wrap;
     }
     .sheets-stat { display: flex; align-items: center; gap: 10px; }
@@ -471,24 +471,7 @@
     .sheets-val.negative { color: #DC2626; }
     .sheets-sub { font-size: 10px; color: var(--muted); white-space: nowrap; }
     .sheets-divider { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
-    .sheets-sparrate-wrap { display: flex; align-items: center; gap: 6px; }
-    .sheets-sparrate-input {
-      font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500;
-      background: transparent; border: none; border-bottom: 1.5px solid var(--border);
-      color: var(--text); width: 72px; outline: none; transition: border-color 0.15s;
-      padding: 0 2px;
-    }
-    .sheets-sparrate-input:focus { border-color: var(--text); }
-    .sheets-sparrate-input::-webkit-outer-spin-button,
-    .sheets-sparrate-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-    .sheets-save-btn {
-      padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
-      background: transparent; font-family: 'DM Sans', sans-serif; font-size: 11px;
-      font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.15s;
-    }
-    .sheets-save-btn:hover { border-color: var(--text); color: var(--text); }
-    .sheets-save-btn.saved { border-color: #1a9862; color: #1a9862; }
-    .sheets-updated { font-size: 10px; color: var(--muted); margin-left: auto; }
+    .sheets-updated { font-size: 10px; color: var(--muted); }
     @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
     /* ══ MOBILE OVERRIDES ══ */
@@ -527,25 +510,6 @@
 </div>
 
 <div class="page" id="main-page">
-
-  <!-- SHEETS FINANCE CARD -->
-  <div class="sheets-card" id="sheets-card">
-    <div class="sheets-stat">
-      <span class="sheets-label">💰 Pro Tag verfügbar</span>
-      <span class="sheets-val" id="sheets-daily">—</span>
-      <span class="sheets-sub" id="sheets-daily-sub">lädt…</span>
-    </div>
-    <div class="sheets-divider"></div>
-    <div class="sheets-stat">
-      <span class="sheets-label">📈 Sparrate / Monat</span>
-      <div class="sheets-sparrate-wrap">
-        <input type="number" class="sheets-sparrate-input" id="sheets-sparrate" placeholder="—" step="10"/>
-        <span style="font-size:13px;color:var(--muted)">€</span>
-        <button class="sheets-save-btn" id="sparrate-save-btn" onclick="saveSparrate()">Speichern</button>
-      </div>
-    </div>
-    <span class="sheets-updated" id="sheets-updated"></span>
-  </div>
 
   <!-- Topbar -->
   <div class="topbar">
@@ -628,6 +592,25 @@
       <button class="submit-btn" id="submit-btn">Eintragen</button>
     </div>
 
+    <!-- SHEETS FINANCE CARD – desktop: under expense form -->
+    <div class="sheets-card" id="sheets-card">
+      <div class="sheets-stat">
+        <div>
+          <div class="sheets-label">💰 Pro Tag verfügbar</div>
+          <div class="sheets-val" id="sheets-daily">—</div>
+          <div class="sheets-sub" id="sheets-daily-sub">lädt…</div>
+        </div>
+      </div>
+      <div class="sheets-divider"></div>
+      <div class="sheets-stat">
+        <div>
+          <div class="sheets-label">📈 Sparrate</div>
+          <div class="sheets-val" id="sheets-sparrate" style="color:var(--text)">—</div>
+          <div class="sheets-sub" id="sheets-updated"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- RIGHT col 1: Transit -->
     <div class="weather-col">
       <!-- Transit card -->
@@ -682,6 +665,24 @@
     </div>
   </div>
 
+  <!-- ══ MOBILE SHEETS CARD (after transit) ══ -->
+  <div class="sheets-card" id="mobile-sheets-card" style="display:none">
+    <div class="sheets-stat">
+      <div>
+        <div class="sheets-label">💰 Pro Tag verfügbar</div>
+        <div class="sheets-val" id="mobile-sheets-daily">—</div>
+        <div class="sheets-sub" id="mobile-sheets-sub">lädt…</div>
+      </div>
+    </div>
+    <div class="sheets-divider"></div>
+    <div class="sheets-stat">
+      <div>
+        <div class="sheets-label">📈 Sparrate</div>
+        <div class="sheets-val" id="mobile-sheets-sparrate" style="color:var(--text)">—</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ MOBILE WEATHER CARD (collapsible) ══ -->
   <div class="m-collapse-card" id="mobile-weather" style="display:none">
     <div class="m-collapse-header" id="mobile-weather-header" onclick="toggleMobileCard('weather')">
@@ -722,6 +723,9 @@ function applyMobileLayout() {
   document.getElementById('mobile-nav').style.display          = mob ? 'grid' : 'none';
   document.getElementById('mobile-weather').style.display      = mob ? 'flex' : 'none';
   document.getElementById('mobile-transit-card').style.display = mob ? 'flex' : 'none';
+  document.getElementById('mobile-sheets-card').style.display  = mob ? 'flex' : 'none';
+  // Desktop sheets card only visible on desktop
+  document.getElementById('sheets-card').style.display         = mob ? 'none' : 'flex';
 }
 applyMobileLayout();
 window.addEventListener('resize', applyMobileLayout);
@@ -1531,10 +1535,18 @@ async function loadSheets() {
     const dailyEl  = document.getElementById('sheets-daily');
     const dailySub = document.getElementById('sheets-daily-sub');
     if (!isNaN(daily)) {
-      dailyEl.textContent  = (daily >= 0 ? '+' : '') + daily.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+      const fmt = (daily >= 0 ? '+' : '') + daily.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
       const cls = daily >= 20 ? 'great' : daily >= 5 ? 'good' : daily >= 0 ? 'neutral' : daily >= -10 ? 'warning' : 'negative';
+      const sub = daily >= 20 ? '✓ gut dabei' : daily >= 5 ? 'knapp ok' : daily >= 0 ? 'fast aufgebraucht' : daily >= -10 ? 'leicht überzogen' : 'überzogen';
+      // Desktop
+      dailyEl.textContent  = fmt;
       dailyEl.className    = 'sheets-val ' + cls;
-      dailySub.textContent = daily >= 20 ? '✓ gut dabei' : daily >= 5 ? 'knapp ok' : daily >= 0 ? 'fast aufgebraucht' : daily >= -10 ? 'leicht überzogen' : 'überzogen';
+      dailySub.textContent = sub;
+      // Mobile
+      const md = document.getElementById('mobile-sheets-daily');
+      const ms = document.getElementById('mobile-sheets-sub');
+      if (md) { md.textContent = fmt; md.className = 'sheets-val ' + cls; }
+      if (ms) ms.textContent = sub;
     } else {
       dailyEl.textContent  = rawDaily || '—';
       dailyEl.className    = 'sheets-val';
@@ -1543,11 +1555,13 @@ async function loadSheets() {
 
     const sparrate = parseEuro(rawSparrate);
     const sparEl   = document.getElementById('sheets-sparrate');
-    if (!isNaN(sparrate) && sparEl.value === '') sparEl.value = sparrate.toFixed(0);
-    else { const s = localStorage.getItem('sparrate_local'); if (s && !sparEl.value) sparEl.value = s; }
+    const mSparEl  = document.getElementById('mobile-sheets-sparrate');
+    const sparFmt  = !isNaN(sparrate) ? sparrate.toFixed(0) + ' €' : (localStorage.getItem('sparrate_local') ? localStorage.getItem('sparrate_local') + ' €' : '—');
+    if (sparEl)  sparEl.textContent  = sparFmt;
+    if (mSparEl) mSparEl.textContent = sparFmt;
 
-    document.getElementById('sheets-updated').textContent =
-      'Stand: ' + new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    const updEl = document.getElementById('sheets-updated');
+    if (updEl) updEl.textContent = 'Stand: ' + new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
   } catch(e) {
     document.getElementById('sheets-daily').textContent     = '—';
     document.getElementById('sheets-daily-sub').textContent = 'Fehler: ' + e.message;
