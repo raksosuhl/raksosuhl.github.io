@@ -534,11 +534,12 @@
     </div>
   </div>
 
-  <!-- Columns (desktop: 2-col, mobile: single col) -->
+  <!-- Columns (desktop: 3-col, mobile: single col) -->
   <div class="columns">
 
-    <!-- LEFT / ONLY on mobile: Expense form -->
-    <div class="card">
+    <!-- LEFT col: Expense form + Finance card -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
       <div class="amount-block" id="amount-block">
         <div class="amount-label-row">
           <label for="betrag">Betrag</label>
@@ -590,9 +591,9 @@
 
       <p class="date-chip">📅 <span id="today-display"></span></p>
       <button class="submit-btn" id="submit-btn">Eintragen</button>
-    </div>
+    </div><!-- end expense card -->
 
-    <!-- SHEETS FINANCE CARD – desktop: under expense form -->
+    <!-- SHEETS FINANCE CARD -->
     <div class="sheets-card" id="sheets-card">
       <div class="sheets-stat">
         <div>
@@ -610,6 +611,8 @@
         </div>
       </div>
     </div>
+
+    </div><!-- end left col wrapper -->
 
     <!-- RIGHT col 1: Transit -->
     <div class="weather-col">
