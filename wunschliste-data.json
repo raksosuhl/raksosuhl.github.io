@@ -31,7 +31,7 @@
       "budgetFit": 8,
       "urgent": 4,
       "addedAt": 1777192867844,
-      "bought": false
+      "bought": true
     },
     {
       "id": "1777230471693",
@@ -51,5 +51,5 @@
     }
   ],
   "plan": [],
-  "savedAt": 1777230476022
+  "savedAt": 1777542073261
 }
