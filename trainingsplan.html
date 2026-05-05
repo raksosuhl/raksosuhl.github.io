@@ -1,1 +1,633 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laufplan Tracker – 20km Comeback</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0b0d; --surface: #12141a; --card: #181b22; --card2: #1e2128;
+    --border: #252830; --border2: #2e3340;
+    --text: #eceef4; --muted: #5a6275; --subtle: #8892a4;
+    --green: #22c55e; --green-bg: #052e16; --green-border: #166534;
+    --red: #f43f5e; --red-bg: #1c0a12; --red-border: #7f1d2e;
+    --blue: #3b82f6; --blue-bg: #0c1529; --blue-border: #1e3a6e;
+    --yellow: #f59e0b; --orange: #f97316;
+    --p1: #4ade80; --p2: #facc15; --p3: #f97316; --p4: #f43f5e;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  html { background: var(--bg); }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; min-height: 100vh; }
+  input, button, select { font-family: inherit; }
+  input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  .fade-in { animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useCallback, useMemo, useEffect, useRef } = React;
 
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS & DATA
+// ═══════════════════════════════════════════════════════════
+const SK = 'laufplan_comeback_v1';
+const TODAY = new Date().toISOString().split('T')[0];
+
+const PHASE = {
+  1: { name:'Phase 1', short:'P1', color:'#4ade80', bg:'rgba(74,222,128,0.1)' },
+  2: { name:'Phase 2', short:'P2', color:'#facc15', bg:'rgba(250,204,21,0.1)' },
+  3: { name:'Phase 3', short:'P3', color:'#f97316', bg:'rgba(249,115,22,0.1)' },
+  4: { name:'Phase 4', short:'P4', color:'#f43f5e', bg:'rgba(244,63,94,0.1)' },
+};
+const TYPE = {
+  locker: { label:'Locker',     color:'#818cf8', bg:'rgba(129,140,248,0.13)' },
+  langer: { label:'Langer Lauf',color:'#a78bfa', bg:'rgba(167,139,250,0.13)' },
+  tempo:  { label:'Tempo',      color:'#f97316', bg:'rgba(249,115,22,0.13)'  },
+  regen:  { label:'Regen',      color:'#6b7280', bg:'rgba(107,114,128,0.13)' },
+  ziel:   { label:'ZIEL 20KM',  color:'#f43f5e', bg:'rgba(244,63,94,0.15)'  },
+};
+const MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const WDAYS  = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+
+// All 41 running sessions
+const SEED = [
+  {id:1, w:1, ph:1, date:'2026-04-28', type:'locker', desc:'5 × 400m locker',        detail:'Wiedereinstieg',              km:2,    min:15,  re:false, done:true,  aKm:2,   pain:false, note:'Erledigt ✓'},
+  {id:2, w:1, ph:1, date:'2026-05-03', type:'langer', desc:'25 min locker',           detail:'Flache Strecke, Z2',          km:4,    min:25,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:3, w:2, ph:1, date:'2026-05-05', type:'locker', desc:'25 min locker',           detail:'Minimal mehr als W1',         km:4,    min:25,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:4, w:2, ph:1, date:'2026-05-10', type:'langer', desc:'30 min locker',           detail:'Z2, kein Blick auf Pace',     km:5,    min:30,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:5, w:3, ph:1, date:'2026-05-12', type:'locker', desc:'28 min locker',           detail:'Ebene Strecke',               km:4.5,  min:28,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:6, w:3, ph:1, date:'2026-05-17', type:'langer', desc:'38 min locker',           detail:'Erste längere Einheit',       km:6,    min:38,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:7, w:4, ph:1, date:'2026-05-19', type:'regen',  desc:'22 min sehr locker',      detail:'Knie-Check',                  km:3.5,  min:22,  re:true,  done:false, aKm:null,pain:false, note:''},
+  {id:8, w:4, ph:1, date:'2026-05-24', type:'regen',  desc:'30 min locker',           detail:'Kein Ehrgeiz',                km:5,    min:30,  re:true,  done:false, aKm:null,pain:false, note:''},
+  {id:9, w:5, ph:1, date:'2026-05-26', type:'locker', desc:'32 min locker',           detail:'',                            km:5,    min:32,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:10,w:5, ph:1, date:'2026-05-31', type:'langer', desc:'45 min locker',           detail:'Ende Phase 1',                km:7.5,  min:45,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:11,w:6, ph:2, date:'2026-06-02', type:'locker', desc:'35 min locker',           detail:'',                            km:6,    min:35,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:12,w:6, ph:2, date:'2026-06-07', type:'langer', desc:'52 min locker',           detail:'~8–9km, Zeit läuft',          km:9,    min:52,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:13,w:7, ph:2, date:'2026-06-09', type:'locker', desc:'38 min locker',           detail:'',                            km:6,    min:38,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:14,w:7, ph:2, date:'2026-06-14', type:'langer', desc:'60 min locker',           detail:'~10km — Meilenstein 🎉',      km:10,   min:60,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:15,w:8, ph:2, date:'2026-06-16', type:'locker', desc:'32 min locker',           detail:'',                            km:5,    min:32,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:16,w:8, ph:2, date:'2026-06-18', type:'locker', desc:'28 min locker',           detail:'Neuer 3. Lauftag',            km:4.5,  min:28,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:17,w:8, ph:2, date:'2026-06-21', type:'langer', desc:'62 min locker',           detail:'~10–11km',                   km:10.5, min:62,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:18,w:9, ph:2, date:'2026-06-23', type:'regen',  desc:'25 min sehr locker',      detail:'',                            km:4,    min:25,  re:true,  done:false, aKm:null,pain:false, note:''},
+  {id:19,w:9, ph:2, date:'2026-06-25', type:'regen',  desc:'22 min locker',           detail:'Knie-Check',                  km:3.5,  min:22,  re:true,  done:false, aKm:null,pain:false, note:''},
+  {id:20,w:9, ph:2, date:'2026-06-28', type:'regen',  desc:'48 min locker',           detail:'Ende Phase 2',                km:8,    min:48,  re:true,  done:false, aKm:null,pain:false, note:''},
+  {id:21,w:10,ph:3, date:'2026-06-30', type:'locker', desc:'38 min locker',           detail:'',                            km:6.5,  min:38,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:22,w:10,ph:3, date:'2026-07-02', type:'tempo',  desc:'3×6 min @ 5:30/km',       detail:'WU 10 min + CD 10 min',       km:8,    min:50,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:23,w:10,ph:3, date:'2026-07-05', type:'langer', desc:'75 min locker',           detail:'~12–13km',                   km:13,   min:75,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:24,w:11,ph:3, date:'2026-07-07', type:'locker', desc:'40 min locker',           detail:'',                            km:7,    min:40,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:25,w:11,ph:3, date:'2026-07-09', type:'tempo',  desc:'4×6 min @ 5:25/km',       detail:'WU/CD je 10 min',             km:9,    min:55,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:26,w:11,ph:3, date:'2026-07-12', type:'langer', desc:'85 min locker',           detail:'~14–15km',                   km:14.5, min:85,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:27,w:12,ph:3, date:'2026-07-14', type:'regen',  desc:'28 min sehr locker',      detail:'',                            km:4.5,  min:28,  re:true,  done:false, aKm:null,pain:false, note:''},
+  {id:28,w:12,ph:3, date:'2026-07-16', type:'regen',  desc:'25 min locker',           detail:'',                            km:4,    min:25,  re:true,  done:false, aKm:null,pain:false, note:''},
+  {id:29,w:12,ph:3, date:'2026-07-19', type:'regen',  desc:'52 min locker',           detail:'',                            km:9,    min:52,  re:true,  done:false, aKm:null,pain:false, note:''},
+  {id:30,w:13,ph:3, date:'2026-07-21', type:'locker', desc:'40 min locker',           detail:'',                            km:7,    min:40,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:31,w:13,ph:3, date:'2026-07-23', type:'tempo',  desc:'2×12 min @ 5:20/km',      detail:'WU/CD je 10 min',             km:10,   min:60,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:32,w:13,ph:3, date:'2026-07-26', type:'langer', desc:'97 min locker',           detail:'~16–17km',                   km:17,   min:97,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:33,w:14,ph:4, date:'2026-07-28', type:'locker', desc:'40 min locker',           detail:'',                            km:7,    min:40,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:34,w:14,ph:4, date:'2026-07-30', type:'tempo',  desc:'2×15 min @ 5:15/km',      detail:'WU/CD je 10 min – Zielpace!', km:10.5, min:60,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:35,w:14,ph:4, date:'2026-08-02', type:'langer', desc:'100 min locker',          detail:'~17–18km',                   km:17.5, min:100, re:false, done:false, aKm:null,pain:false, note:''},
+  {id:36,w:15,ph:4, date:'2026-08-04', type:'locker', desc:'35 min locker',           detail:'Tapering beginnt',            km:6,    min:35,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:37,w:15,ph:4, date:'2026-08-06', type:'tempo',  desc:'2×18 min @ 5:15/km',      detail:'Letzte Tempoeinheit',         km:11,   min:65,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:38,w:15,ph:4, date:'2026-08-09', type:'langer', desc:'88 min locker',           detail:'~15km, Taper',               km:15,   min:88,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:39,w:16,ph:4, date:'2026-08-11', type:'locker', desc:'22 min sehr locker',      detail:'Beine locker halten',         km:3.5,  min:22,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:40,w:16,ph:4, date:'2026-08-13', type:'locker', desc:'18 min + 4×80m Strides',  detail:'Beine aufwecken',             km:3.5,  min:22,  re:false, done:false, aKm:null,pain:false, note:''},
+  {id:41,w:16,ph:4, date:'2026-08-16', type:'ziel',   desc:'20km @ 5:15/km → ~1:45h', detail:'Erste 5km ruhig — dann alles geben 🔥', km:20, min:105, re:false, done:false, aKm:null,pain:false, note:''},
+];
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+function load() {
+  try { const s = localStorage.getItem(SK); if (s) return JSON.parse(s); } catch {}
+  return SEED.map(s => ({...s}));
+}
+function save(sessions) { try { localStorage.setItem(SK, JSON.stringify(sessions)); } catch {} }
+
+function fmtDE(d) { const [y,m,dd] = d.split('-'); return `${dd}.${m}.${y}`; }
+function fmtShort(d) { const [,m,dd] = d.split('-'); return `${+dd}.${+m}.`; }
+function wday(d) { return WDAYS[(new Date(d+'T12:00:00').getDay()+6)%7]; }
+function status(s) {
+  if (s.done) return 'done';
+  if (s.date < TODAY) return 'missed';
+  if (s.date === TODAY) return 'today';
+  return 'planned';
+}
+function gcalUrl(s, overrideDate) {
+  const d = (overrideDate || s.date).replace(/-/g,'');
+  const ph = PHASE[s.ph]; const ty = TYPE[s.type];
+  const title = encodeURIComponent(`🏃 Lauf W${s.w}: ${s.desc}`);
+  const details = encodeURIComponent(`Woche ${s.w} — ${ph.name}\nTyp: ${ty.label}\nZiel: ~${s.km}km in ~${s.min}min\n${s.detail}`);
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${d}T120000/${d}T134500&details=${details}`;
+}
+
+const S_STYLE = {
+  done:    { bg:'#041a0a', border:'#166534',  dot:'#22c55e' },
+  missed:  { bg:'#130509', border:'#7f1d2e',  dot:'#f43f5e' },
+  today:   { bg:'#070f1f', border:'#1e3a6e',  dot:'#3b82f6' },
+  planned: { bg:'var(--card)', border:'var(--border)', dot:'#374151' },
+};
+
+// ═══════════════════════════════════════════════════════════
+// MINI COMPONENTS
+// ═══════════════════════════════════════════════════════════
+function Pill({ label, color, bg }) {
+  return <span style={{ display:'inline-block', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', padding:'2px 7px', borderRadius:3, background:bg, color }}>{label}</span>;
+}
+function Btn({ onClick, c='#9ca3af', bg='var(--card)', border=null, children, small, disabled }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      padding: small ? '4px 9px' : '6px 12px',
+      borderRadius: 5, border: `1px solid ${border || c+'44'}`,
+      background: bg, color: c, fontSize: small ? 10 : 12,
+      fontWeight: 600, cursor: disabled ? 'default' : 'pointer',
+      opacity: disabled ? 0.4 : 1, whiteSpace:'nowrap',
+      transition:'opacity 0.15s',
+    }}>{children}</button>
+  );
+}
+function Label({ children }) {
+  return <div style={{ fontSize:11, color:'var(--subtle)', marginBottom:5, marginTop:14, fontWeight:500 }}>{children}</div>;
+}
+const iStyle = {
+  width:'100%', padding:'8px 10px', background:'var(--surface)',
+  border:'1px solid var(--border2)', borderRadius:6,
+  color:'var(--text)', fontSize:14, outline:'none',
+};
+
+// ═══════════════════════════════════════════════════════════
+// APP
+// ═══════════════════════════════════════════════════════════
+function App() {
+  const [sessions, setSessions] = useState(load);
+  const [view, setView] = useState('list');
+  const [calMonth, setCalMonth] = useState(() => {
+    const t = new Date(TODAY+'T12:00:00');
+    return new Date(t.getFullYear(), t.getMonth(), 1);
+  });
+  const [openWeeks, setOpenWeeks] = useState(() => {
+    const s = load();
+    const nxt = s.find(x => !x.done && x.date >= TODAY);
+    return nxt ? new Set([nxt.w]) : new Set([1]);
+  });
+  const [completeId, setCompleteId] = useState(null);
+  const [rescheduleId, setRescheduleId] = useState(null);
+  const [cForm, setCForm] = useState({ km:'', pain:false, note:'' });
+  const [rDate, setRDate] = useState('');
+  const [dragId, setDragId] = useState(null);
+  const [dragOver, setDragOver] = useState(null);
+
+  const upd = useCallback(next => { setSessions(next); save(next); }, []);
+
+  // ── Stats ──────────────────────────────────────────
+  const stats = useMemo(() => {
+    const done = sessions.filter(s => s.done);
+    const totalKm = done.reduce((a, s) => a + (s.aKm ?? s.km), 0);
+    const targetKm = sessions.reduce((a, s) => a + s.km, 0);
+    // streak: consecutive weeks (from most recent back) where all non-regen past sessions done
+    const weeks = [...new Set(sessions.map(s => s.w))].sort((a,b)=>b-a);
+    let streak = 0;
+    for (const w of weeks) {
+      const ws = sessions.filter(s => s.w === w && !s.re && s.date <= TODAY);
+      if (!ws.length) continue;
+      if (ws.every(s => s.done)) streak++;
+      else break;
+    }
+    const recentPain = done.some(s => s.pain && (new Date(TODAY)-new Date(s.date))/864e5 <= 14);
+    return { doneCount: done.length, total: sessions.length, totalKm, targetKm, streak, recentPain };
+  }, [sessions]);
+
+  const upcoming = useMemo(() =>
+    sessions.filter(s => !s.done && s.date >= TODAY)
+      .sort((a,b) => a.date.localeCompare(b.date)).slice(0, 3),
+  [sessions]);
+
+  // ── Handlers ───────────────────────────────────────
+  function openComplete(id) {
+    const s = sessions.find(x => x.id === id);
+    setCForm({ km: String(s.km), pain: false, note: '' });
+    setCompleteId(id);
+  }
+  function submitComplete() {
+    upd(sessions.map(s => s.id === completeId
+      ? { ...s, done:true, aKm: parseFloat(cForm.km)||s.km, pain:cForm.pain, note:cForm.note }
+      : s
+    ));
+    setCompleteId(null);
+  }
+  function undoDone(id) { upd(sessions.map(s => s.id===id ? {...s, done:false, aKm:null, pain:false, note:''} : s)); }
+
+  function openReschedule(id) {
+    setRDate(sessions.find(x => x.id===id)?.date || '');
+    setRescheduleId(id);
+  }
+  function submitReschedule() {
+    if (!rDate) return;
+    upd(sessions.map(s => s.id===rescheduleId ? {...s, date:rDate} : s));
+    setRescheduleId(null);
+  }
+
+  function openGCal(id, overrideDate) {
+    const s = sessions.find(x => x.id===id);
+    window.open(gcalUrl(s, overrideDate), '_blank');
+  }
+
+  // drag & drop (calendar)
+  function onDragStart(id) { setDragId(id); }
+  function onDragOver(date, e) { e.preventDefault(); setDragOver(date); }
+  function onDrop(date) {
+    if (dragId != null) upd(sessions.map(s => s.id===dragId ? {...s, date} : s));
+    setDragId(null); setDragOver(null);
+  }
+
+  return (
+    <div style={{ maxWidth: 900, margin:'0 auto', padding:'24px 14px 72px' }}>
+
+      {/* ── HEADER ── */}
+      <div style={{ marginBottom:24, paddingLeft:16, borderLeft:'4px solid #f43f5e' }}>
+        <div style={{ fontSize:10, letterSpacing:3, textTransform:'uppercase', color:'var(--muted)', marginBottom:4 }}>Comeback · Knieproblem · 16 Wochen</div>
+        <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(32px,6vw,58px)', letterSpacing:1, color:'var(--text)', lineHeight:1 }}>
+          Laufplan <span style={{ color:'#f43f5e' }}>20KM</span>
+        </h1>
+        <div style={{ marginTop:6, fontSize:12, color:'var(--muted)' }}>Start 28. Apr 2026 · Ziel 16. Aug 2026 · Zielpace ~5:15/km</div>
+      </div>
+
+      {/* ── STATS ── */}
+      <StatsBar stats={stats} />
+
+      {/* ── NEXT 3 ── */}
+      {upcoming.length > 0 && (
+        <NextUp sessions={upcoming} onComplete={openComplete} onReschedule={openReschedule} onGCal={openGCal} />
+      )}
+
+      {/* ── VIEW TOGGLE ── */}
+      <div style={{ display:'flex', gap:6, marginBottom:14 }}>
+        {[['list','☰ Liste'],['calendar','◫ Monatsansicht']].map(([v,l]) => (
+          <button key={v} onClick={() => setView(v)} style={{
+            padding:'7px 18px', borderRadius:6, border:`1px solid ${view===v ? '#f43f5e' : 'var(--border2)'}`,
+            background: view===v ? '#f43f5e' : 'var(--card)', color: view===v ? '#fff' : 'var(--subtle)',
+            fontSize:12, fontWeight:600, cursor:'pointer', transition:'all 0.15s',
+          }}>{l}</button>
+        ))}
+      </div>
+
+      {/* ── VIEWS ── */}
+      {view === 'list'
+        ? <ListView sessions={sessions} openWeeks={openWeeks} setOpenWeeks={setOpenWeeks}
+            onComplete={openComplete} onUndo={undoDone} onReschedule={openReschedule} onGCal={openGCal} />
+        : <CalView sessions={sessions} month={calMonth} setMonth={setCalMonth}
+            onComplete={openComplete} onReschedule={openReschedule} onGCal={openGCal}
+            onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop}
+            onDragEnd={() => { setDragId(null); setDragOver(null); }}
+            dragOver={dragOver} dragId={dragId}
+          />
+      }
+
+      {/* ── MODALS ── */}
+      {completeId != null && (
+        <Overlay onClose={() => setCompleteId(null)}>
+          <CompleteModal session={sessions.find(s=>s.id===completeId)}
+            form={cForm} setForm={setCForm} onSubmit={submitComplete} onClose={() => setCompleteId(null)} />
+        </Overlay>
+      )}
+      {rescheduleId != null && (
+        <Overlay onClose={() => setRescheduleId(null)}>
+          <RescheduleModal session={sessions.find(s=>s.id===rescheduleId)}
+            date={rDate} setDate={setRDate}
+            onSubmit={submitReschedule} onGCal={() => openGCal(rescheduleId, rDate)} onClose={() => setRescheduleId(null)} />
+        </Overlay>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// STATS BAR
+// ═══════════════════════════════════════════════════════════
+function StatsBar({ stats: { doneCount, total, totalKm, targetKm, streak, recentPain } }) {
+  const pct = Math.round(totalKm / targetKm * 100) || 0;
+  const knie = recentPain
+    ? { v:'⚠️ Vorsicht', c:'#fbbf24' }
+    : { v:'✓ Okay',      c:'#22c55e' };
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:8, marginBottom:14, background:'var(--card)', border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:'14px 16px' }}>
+      {[
+        { lbl:'Km gelaufen',     v:`${totalKm.toFixed(1)}`, sub:`von ${targetKm}km`,      c:'#818cf8' },
+        { lbl:'Einheiten',       v:`${doneCount} / ${total}`, sub:`${pct}% absolviert`,   c:'#34d399' },
+        { lbl:'Wochen-Streak',   v:`${streak}×`,            sub:'in Folge ✓',             c:'#facc15' },
+        { lbl:'Knie',            v:knie.v,                  sub:'letzte 2 Wochen',        c:knie.c   },
+      ].map(({ lbl, v, sub, c }) => (
+        <div key={lbl}>
+          <div style={{ fontSize:9, textTransform:'uppercase', letterSpacing:'1.5px', color:'var(--muted)', marginBottom:4 }}>{lbl}</div>
+          <div style={{ fontSize:22, fontWeight:700, color:c, lineHeight:1.1, fontVariantNumeric:'tabular-nums' }}>{v}</div>
+          <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>{sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// NEXT 3 SESSIONS
+// ═══════════════════════════════════════════════════════════
+function NextUp({ sessions, onComplete, onReschedule, onGCal }) {
+  return (
+    <div style={{ marginBottom:14 }}>
+      <div style={{ fontSize:10, fontWeight:700, letterSpacing:'2px', textTransform:'uppercase', color:'var(--muted)', marginBottom:8 }}>Nächste Einheiten</div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))', gap:7 }}>
+        {sessions.map((s, i) => {
+          const ty = TYPE[s.type]; const ph = PHASE[s.ph];
+          const isNow = i === 0;
+          return (
+            <div key={s.id} className="fade-in" style={{
+              background: isNow ? '#07111e' : 'var(--card)',
+              border: `1px solid ${isNow ? '#1e3a6e' : 'var(--border)'}`,
+              borderRadius:'var(--radius)', padding:'12px 14px',
+            }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
+                <Pill label={ty.label} color={ty.color} bg={ty.bg} />
+                {isNow && <span style={{ fontSize:9, fontWeight:700, color:'#3b82f6', letterSpacing:1 }}>NÄCHSTE</span>}
+              </div>
+              <div style={{ fontWeight:600, fontSize:14, marginBottom:3 }}>{s.desc}</div>
+              <div style={{ fontSize:11, color:'var(--muted)', marginBottom:9 }}>
+                {wday(s.date)}, {fmtDE(s.date)} · ~{s.km}km · W{s.w}
+                {s.detail && <><br/><span style={{color:'var(--muted)'}}>{s.detail}</span></>}
+              </div>
+              <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+                <Btn onClick={() => onComplete(s.id)} c='#22c55e' bg='#041a0a' border='#166534'>✓ Erledigt</Btn>
+                <Btn onClick={() => onReschedule(s.id)} c='var(--subtle)'>↻</Btn>
+                <Btn onClick={() => onGCal(s.id)} c='#60a5fa' bg='#070f1f' border='#1e3a6e'>📅 GCal</Btn>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// LIST VIEW
+// ═══════════════════════════════════════════════════════════
+function ListView({ sessions, openWeeks, setOpenWeeks, onComplete, onUndo, onReschedule, onGCal }) {
+  const weeks = useMemo(() => [...new Set(sessions.map(s => s.w))].sort((a,b)=>a-b), [sessions]);
+  function toggle(w) {
+    setOpenWeeks(prev => { const n=new Set(prev); n.has(w)?n.delete(w):n.add(w); return n; });
+  }
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+      {weeks.map(w => {
+        const ws = sessions.filter(s=>s.w===w).sort((a,b)=>a.date.localeCompare(b.date));
+        const ph = PHASE[ws[0].ph];
+        const doneC = ws.filter(s=>s.done).length;
+        const open = openWeeks.has(w);
+        const hasActive = ws.some(s => s.date === TODAY || (s.date > TODAY && !s.done));
+        return (
+          <div key={w} style={{ background:'var(--card)', border:`1px solid ${hasActive && !open ? '#1e3a6e' : 'var(--border)'}`, borderRadius:'var(--radius)', overflow:'hidden' }}>
+            {/* Week header */}
+            <div onClick={() => toggle(w)} style={{ padding:'11px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:10, userSelect:'none' }}>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:'var(--muted)', minWidth:34, lineHeight:1 }}>W{w}</span>
+              <span style={{ flex:1, display:'flex', alignItems:'center', gap:7, flexWrap:'wrap' }}>
+                <span style={{ fontWeight:600, fontSize:13 }}>{ws[0]?.date ? fmtShort(ws[0].date) : ''}</span>
+                <Pill label={ph.name} color={ph.color} bg={ph.bg} />
+                {ws[0].re && <Pill label="Regen" color="#6b7280" bg="rgba(107,114,128,0.13)" />}
+              </span>
+              <span style={{ fontSize:11, color:'var(--muted)', marginRight:6 }}>{doneC}/{ws.length}</span>
+              <span style={{ fontSize:14, color:'var(--muted)', transition:'transform 0.2s', display:'inline-block', transform: open ? 'rotate(90deg)' : 'none' }}>›</span>
+            </div>
+            {open && (
+              <div style={{ borderTop:'1px solid var(--border)' }}>
+                {ws.map(s => <SRow key={s.id} s={s} onComplete={onComplete} onUndo={onUndo} onReschedule={onReschedule} onGCal={onGCal} />)}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SRow({ s, onComplete, onUndo, onReschedule, onGCal }) {
+  const st = status(s); const ty = TYPE[s.type]; const ss = S_STYLE[st];
+  return (
+    <div style={{ padding:'10px 16px', borderBottom:'1px solid #1a1d22', background:ss.bg, display:'flex', alignItems:'flex-start', gap:10 }}>
+      <div style={{ marginTop:5, width:7, height:7, borderRadius:'50%', flexShrink:0, background:ss.dot }} />
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:7, flexWrap:'wrap', marginBottom:3 }}>
+          <Pill label={ty.label} color={ty.color} bg={ty.bg} />
+          <span style={{ fontSize:13, fontWeight:600 }}>{s.desc}</span>
+          {st==='today' && <span style={{ fontSize:9, color:'#60a5fa', fontWeight:700, letterSpacing:1 }}>HEUTE</span>}
+        </div>
+        <div style={{ fontSize:11, color:'var(--muted)' }}>
+          {wday(s.date)}, {fmtDE(s.date)} · ~{s.km}km · ~{s.min}min{s.re ? ' · Regen' : ''}
+        </div>
+        {s.detail && <div style={{ fontSize:11, color:'var(--muted)', opacity:0.7, marginTop:1 }}>{s.detail}</div>}
+        {s.done && (
+          <div style={{ fontSize:11, color:'#22c55e', marginTop:4 }}>
+            ✓ {s.aKm ?? s.km}km gelaufen
+            {s.pain && <span style={{ color:'#fbbf24', marginLeft:6 }}>· ⚠️ Knieschmerzen</span>}
+            {s.note && <span style={{ color:'var(--subtle)', marginLeft:6 }}>· "{s.note}"</span>}
+          </div>
+        )}
+        {st==='missed' && !s.done && (
+          <div style={{ fontSize:11, color:'#f87171', marginTop:3 }}>Verpasst — noch nachholen?</div>
+        )}
+      </div>
+      <div style={{ display:'flex', gap:4, flexShrink:0, flexWrap:'wrap', justifyContent:'flex-end' }}>
+        {s.done
+          ? <Btn onClick={() => onUndo(s.id)} small c='var(--muted)'>↩ Undo</Btn>
+          : <Btn onClick={() => onComplete(s.id)} small c='#22c55e' bg='#041a0a' border='#166534'>✓</Btn>
+        }
+        {!s.done && <Btn onClick={() => onReschedule(s.id)} small c='var(--muted)'>↻</Btn>}
+        <Btn onClick={() => onGCal(s.id)} small c='#60a5fa' bg='#070f1f' border='#1e3a6e'>📅</Btn>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// CALENDAR VIEW
+// ═══════════════════════════════════════════════════════════
+function CalView({ sessions, month, setMonth, onComplete, onReschedule, onGCal, onDragStart, onDragOver, onDrop, onDragEnd, dragOver, dragId }) {
+  const yr = month.getFullYear(); const mo = month.getMonth();
+  const daysInMonth = new Date(yr, mo+1, 0).getDate();
+  const firstWday = (new Date(yr, mo, 1).getDay()+6)%7; // Mon=0
+
+  const cells = [];
+  for (let i=0; i<firstWday; i++) {
+    const d = new Date(yr, mo, 1-(firstWday-i));
+    cells.push({ date: d.toISOString().split('T')[0], inMonth:false });
+  }
+  for (let d=1; d<=daysInMonth; d++) {
+    cells.push({ date: new Date(yr,mo,d).toISOString().split('T')[0], inMonth:true });
+  }
+  while (cells.length < 42) {
+    const d = new Date(yr, mo+1, cells.length - firstWday - daysInMonth + 1);
+    cells.push({ date: d.toISOString().split('T')[0], inMonth:false });
+  }
+
+  const byDate = useMemo(() => {
+    const m = {};
+    sessions.forEach(s => { if (!m[s.date]) m[s.date]=[]; m[s.date].push(s); });
+    return m;
+  }, [sessions]);
+
+  return (
+    <div>
+      {/* Nav */}
+      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+        <button onClick={() => setMonth(new Date(yr,mo-1,1))} style={navBtn}>‹</button>
+        <span style={{ fontWeight:700, fontSize:16, flex:1, textAlign:'center' }}>{MONTHS[mo]} {yr}</span>
+        <button onClick={() => setMonth(new Date(yr,mo+1,1))} style={navBtn}>›</button>
+      </div>
+      {/* Weekday headers */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', marginBottom:4 }}>
+        {WDAYS.map(d => <div key={d} style={{ textAlign:'center', fontSize:10, fontWeight:700, letterSpacing:1, color:'var(--muted)', padding:'2px 0' }}>{d}</div>)}
+      </div>
+      {/* Grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:3 }}>
+        {cells.map(({ date, inMonth }) => {
+          const ds = byDate[date] || [];
+          const isToday = date === TODAY;
+          const isDragOver = dragOver === date;
+          return (
+            <div key={date}
+              onDragOver={e => onDragOver(date, e)} onDrop={() => onDrop(date)}
+              style={{
+                minHeight:72, borderRadius:6, padding:'4px 5px', overflow:'hidden',
+                background: isDragOver ? '#0d1e33' : isToday ? '#070f1f' : 'var(--card)',
+                border: `1px solid ${isDragOver ? '#3b82f6' : isToday ? '#1e3a6e' : 'var(--border)'}`,
+                opacity: inMonth ? 1 : 0.25,
+              }}>
+              <div style={{ fontSize:11, fontWeight: isToday?700:400, color: isToday?'#60a5fa':'var(--muted)', marginBottom:3 }}>
+                {+date.split('-')[2]}
+              </div>
+              {ds.map(s => {
+                const ty = TYPE[s.type]; const st = status(s);
+                const dragging = dragId === s.id;
+                const bg = st==='done' ? '#041a0a' : st==='missed' ? '#130509' : ty.bg;
+                const co = st==='done' ? '#22c55e' : st==='missed' ? '#f87171' : ty.color;
+                return (
+                  <div key={s.id} draggable={!s.done}
+                    onDragStart={() => onDragStart(s.id)} onDragEnd={onDragEnd}
+                    onClick={() => !s.done ? onComplete(s.id) : null}
+                    title={`${s.desc} · ~${s.km}km · klicken zum ${s.done?'Anzeigen':'Abhaken'}`}
+                    style={{ fontSize:9, fontWeight:600, padding:'2px 5px', borderRadius:3, marginBottom:2, cursor:s.done?'default':'pointer', background:bg, color:co, border:`1px solid ${co}33`, opacity:dragging?0.3:1, display:'flex', justifyContent:'space-between', gap:2, alignItems:'center', transition:'opacity 0.15s' }}>
+                    <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:56 }}>
+                      {st==='done' ? '✓ ' : ''}{s.desc.split(' ').slice(0,2).join(' ')}
+                    </span>
+                    <span style={{ opacity:0.75, flexShrink:0 }}>
+                      {st==='done' && s.aKm ? `${s.aKm}` : `~${s.km}`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+      {/* Legend */}
+      <div style={{ marginTop:10, display:'flex', gap:14, flexWrap:'wrap', fontSize:11, color:'var(--muted)' }}>
+        {[['#22c55e','Erledigt'],['#818cf8','Geplant'],['#f87171','Verpasst'],['#60a5fa','Heute']].map(([c,l]) => (
+          <span key={l} style={{ display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ width:8, height:8, borderRadius:2, background:c, display:'inline-block' }} />{l}
+          </span>
+        ))}
+        <span style={{ color:'#374151', fontStyle:'italic' }}>Drag & Drop = Einheit verschieben</span>
+      </div>
+    </div>
+  );
+}
+
+const navBtn = {
+  background:'var(--card)', border:'1px solid var(--border2)', color:'var(--text)',
+  borderRadius:6, padding:'5px 14px', cursor:'pointer', fontSize:18, lineHeight:1,
+};
+
+// ═══════════════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════════════
+function Overlay({ children, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+      <div onClick={e => e.stopPropagation()} className="fade-in" style={{ background:'#181b22', border:'1px solid var(--border2)', borderRadius:12, padding:22, width:'100%', maxWidth:380 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function CompleteModal({ session:s, form, setForm, onSubmit, onClose }) {
+  const ty = TYPE[s.type];
+  return (
+    <>
+      <div style={{ marginBottom:14 }}>
+        <Pill label={ty.label} color={ty.color} bg={ty.bg} />
+        <div style={{ fontSize:17, fontWeight:700, marginTop:8 }}>{s.desc}</div>
+        <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{wday(s.date)}, {fmtDE(s.date)}</div>
+      </div>
+      <Label>Gelaufene km</Label>
+      <input type="number" step="0.1" min="0" value={form.km}
+        onChange={e => setForm({...form, km:e.target.value})}
+        placeholder={String(s.km)} style={iStyle} />
+      <Label>Knieschmerzen?</Label>
+      <label style={{ display:'flex', alignItems:'center', gap:9, cursor:'pointer', fontSize:13, marginTop:2 }}>
+        <input type="checkbox" checked={form.pain} onChange={e => setForm({...form, pain:e.target.checked})}
+          style={{ width:16, height:16, accentColor:'#fbbf24' }} />
+        <span>Ja, Knieschmerzen bei dieser Einheit</span>
+      </label>
+      <Label>Kommentar (optional)</Label>
+      <input type="text" value={form.note} onChange={e => setForm({...form, note:e.target.value})}
+        placeholder="Wie war's?" style={iStyle} />
+      <div style={{ display:'flex', gap:8, marginTop:20 }}>
+        <button onClick={onSubmit} style={{ flex:1, padding:'10px 0', background:'#166534', color:'#fff', border:'1px solid #16a34a', borderRadius:7, fontWeight:700, fontSize:14, cursor:'pointer' }}>
+          ✓ Einheit abhaken
+        </button>
+        <button onClick={onClose} style={{ padding:'10px 14px', background:'var(--card)', color:'var(--subtle)', border:'1px solid var(--border)', borderRadius:7, cursor:'pointer', fontSize:13 }}>Abbruch</button>
+      </div>
+    </>
+  );
+}
+
+function RescheduleModal({ session:s, date, setDate, onSubmit, onGCal, onClose }) {
+  return (
+    <>
+      <div style={{ marginBottom:14 }}>
+        <div style={{ fontSize:11, color:'var(--muted)', marginBottom:4 }}>Einheit verschieben</div>
+        <div style={{ fontSize:17, fontWeight:700 }}>{s.desc}</div>
+        <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>Aktuell: {wday(s.date)}, {fmtDE(s.date)}</div>
+      </div>
+      <Label>Neues Datum</Label>
+      <input type="date" value={date} onChange={e => setDate(e.target.value)} style={iStyle} />
+      <div style={{ display:'flex', gap:7, marginTop:20, flexWrap:'wrap' }}>
+        <button onClick={onSubmit} style={{ flex:1, minWidth:100, padding:'10px 0', background:'#1e3a6e', color:'#fff', border:'1px solid #3b82f6', borderRadius:7, fontWeight:700, fontSize:14, cursor:'pointer' }}>
+          ↻ Speichern
+        </button>
+        <button onClick={() => { onSubmit(); setTimeout(onGCal, 200); }}
+          style={{ padding:'10px 12px', background:'#07111e', color:'#60a5fa', border:'1px solid #1e3a6e', borderRadius:7, cursor:'pointer', fontSize:12, fontWeight:600 }}>
+          📅 Speichern + GCal
+        </button>
+        <button onClick={onClose} style={{ padding:'10px 12px', background:'var(--card)', color:'var(--subtle)', border:'1px solid var(--border)', borderRadius:7, cursor:'pointer', fontSize:13 }}>✕</button>
+      </div>
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// MOUNT
+// ═══════════════════════════════════════════════════════════
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
